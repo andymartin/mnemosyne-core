@@ -1,17 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
-using FluentResults;
 using MemoryCore.Interfaces;
-using MemoryCore.Mcp;
 using MemoryCore.Models;
 using MemoryCore.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol.Server;
-using Moq;
 using Shouldly;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace MemoryCore.Tests.Integration

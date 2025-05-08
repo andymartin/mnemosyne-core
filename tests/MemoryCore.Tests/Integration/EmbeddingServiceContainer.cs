@@ -11,10 +11,10 @@ namespace MemoryCore.Tests.Integration
         public EmbeddingServiceContainer()
         {
             _container = new ContainerBuilder()
-                .WithImage("mnemosyne-embed:latest") 
+                .WithImage("mnemosyne-embed:latest")
                 .WithName($"embedding-service-test-{Guid.NewGuid().ToString("N").Substring(0, 8)}")
-                .WithPortBinding(8000, true) 
-                .WithExposedPort(8000) 
+                .WithPortBinding(8000, true)
+                .WithExposedPort(8000)
                 .WithWaitStrategy(
                     Wait.ForUnixContainer()
                         .UntilHttpRequestIsSucceeded(request => request.ForPort(8000).ForPath("/health").ForStatusCode(System.Net.HttpStatusCode.OK))
