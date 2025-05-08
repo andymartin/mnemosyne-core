@@ -153,6 +153,67 @@ namespace MemoryCore.Persistence
             }
         }
 
+        public async Task<Result<IEnumerable<MemorygramWithScore>>> FindSimilarAsync(float[] queryVector, int topK)
+        {
+            if (queryVector == null || queryVector.Length == 0)
+            {
+                return Result.Fail<IEnumerable<MemorygramWithScore>>("Query vector cannot be null or empty");
+            }
+
+            if (topK <= 0)
+            {
+                return Result.Fail<IEnumerable<MemorygramWithScore>>("TopK must be greater than 0");
+            }
+
+            try
+            {
+                await using var session = _driver.AsyncSession();
+                
+                return await session.ExecuteReadAsync(async tx =>
+                {
+                    // Use the vector index to find similar memorygrams
+                    var query = @"
+                        CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
+                        YIELD node, score
+                        RETURN node.id AS id, node.content AS content,
+                               node.createdAt AS createdAt, node.updatedAt AS updatedAt,
+                               score
+                        ORDER BY score DESC";
+                    
+                    var parameters = new
+                    {
+                        indexName = "memorygram_content_embedding",
+                        topK = topK,
+                        queryVector = queryVector
+                    };
+                    
+                    var cursor = await tx.RunAsync(query, parameters);
+                    var results = new List<MemorygramWithScore>();
+                    
+                    while (await cursor.FetchAsync())
+                    {
+                        var record = cursor.Current;
+                        var memorygram = new MemorygramWithScore(
+                            Guid.Parse(record["id"].As<string>()),
+                            record["content"].As<string>(),
+                            ConvertToDateTime(record["createdAt"]),
+                            ConvertToDateTime(record["updatedAt"]),
+                            record["score"].As<float>()
+                        );
+                        results.Add(memorygram);
+                    }
+                    
+                    _logger.LogInformation("Found {Count} similar memorygrams", results.Count);
+                    return Result.Ok<IEnumerable<MemorygramWithScore>>(results);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to find similar memorygrams");
+                return Result.Fail<IEnumerable<MemorygramWithScore>>($"Database error: {ex.Message}");
+            }
+        }
+
         private float[] ConvertToFloatArray(object vectorObj)
         {
             if (vectorObj == null)

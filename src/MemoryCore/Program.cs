@@ -69,6 +69,7 @@ builder.Services.AddHttpClient<IEmbeddingService, HttpEmbeddingService>((service
 // Add repository and services
 builder.Services.TryAddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
 builder.Services.TryAddSingleton<IMemorygramService, MemorygramService>();
+builder.Services.TryAddSingleton<IMemoryQueryService, MemoryQueryService>();
 
 // Register MCP server
 builder.Services.AddMcpServer()
