@@ -15,23 +15,34 @@ using Xunit.Abstractions;
 
 namespace MemoryCore.Tests.Integration
 {
-    public class QueryMemoryIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+    public class QueryMemoryIntegrationTests : IClassFixture<CustomWebApplicationFactory>, IDisposable
     {
         private readonly CustomWebApplicationFactory _factory;
         private readonly ITestOutputHelper _output;
         private readonly HttpClient _client;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceScope _scope;
+        private readonly IServiceProvider _scopedServiceProvider;
+        private readonly IMemoryQueryService _memoryQueryService;
 
         public QueryMemoryIntegrationTests(CustomWebApplicationFactory factory, ITestOutputHelper output)
         {
             _factory = factory;
             _output = output;
             _client = _factory.CreateClient();
-            _serviceProvider = _factory.Services;
+            
+            // Create a scope to resolve scoped services
+            _scope = _factory.Services.CreateScope();
+            _scopedServiceProvider = _scope.ServiceProvider;
+            _memoryQueryService = _scopedServiceProvider.GetRequiredService<IMemoryQueryService>();
+        }
+        
+        public void Dispose()
+        {
+            _scope?.Dispose();
         }
 
         [Fact]
-        public async Task QueryMemoryTool_EndToEnd_ReturnsExpectedResults()
+        public async Task QueryMemoryService_EndToEnd_ReturnsExpectedResults()
         {
             // Arrange
             var queryText = "Test query for integration test";
@@ -42,26 +53,23 @@ namespace MemoryCore.Tests.Integration
             var memorygrams = await CreateTestMemorygramsAsync();
             _output.WriteLine($"Created {memorygrams.Count} test memorygrams");
 
-            // Get the QueryMemoryTool instance from the service provider
-            var queryMemoryTool = _serviceProvider.GetRequiredService<QueryMemoryTool>();
-            queryMemoryTool.ShouldNotBeNull();
-
             // Act
-            _output.WriteLine($"Executing QueryMemoryAsync with query: '{queryText}' and topK: {topK}");
-            var result = await queryMemoryTool.QueryMemoryAsync(input);
+            _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and topK: {topK}");
+            var result = await _memoryQueryService.QueryAsync(input);
 
             // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("success");
-            result.Results.ShouldNotBeNull();
-            result.Message.ShouldBeNull();
+            result.IsSuccess.ShouldBeTrue();
+            result.Value.ShouldNotBeNull();
+            result.Value.Status.ShouldBe("success");
+            result.Value.Results.ShouldNotBeNull();
+            result.Value.Message.ShouldBeNull();
 
             // We should get results back (up to topK)
-            result.Results.Count.ShouldBeLessThanOrEqualTo(topK);
-            result.Results.Count.ShouldBeGreaterThan(0);
+            result.Value.Results.Count.ShouldBeLessThanOrEqualTo(topK);
+            result.Value.Results.Count.ShouldBeGreaterThan(0);
 
             // Verify result structure
-            foreach (var item in result.Results)
+            foreach (var item in result.Value.Results)
             {
                 item.Id.ShouldNotBe(Guid.Empty);
                 item.Content.ShouldNotBeNullOrWhiteSpace();
@@ -71,60 +79,50 @@ namespace MemoryCore.Tests.Integration
             }
 
             // Results should be ordered by score (highest first)
-            for (int i = 0; i < result.Results.Count - 1; i++)
+            for (int i = 0; i < result.Value.Results.Count - 1; i++)
             {
-                result.Results[i].Score.ShouldBeGreaterThanOrEqualTo(result.Results[i + 1].Score);
+                result.Value.Results[i].Score.ShouldBeGreaterThanOrEqualTo(result.Value.Results[i + 1].Score);
             }
         }
 
         [Fact]
-        public async Task QueryMemoryTool_WithInvalidTopK_ReturnsError()
+        public async Task QueryMemoryService_WithInvalidTopK_ReturnsError()
         {
             // Arrange
             var queryText = "Test query with invalid topK";
             var topK = 0; // Invalid value
             var input = new McpQueryInput(queryText, topK);
 
-            // Get the QueryMemoryTool instance from the service provider
-            var queryMemoryTool = _serviceProvider.GetRequiredService<QueryMemoryTool>();
-
             // Act
-            _output.WriteLine($"Executing QueryMemoryAsync with query: '{queryText}' and invalid topK: {topK}");
-            var result = await queryMemoryTool.QueryMemoryAsync(input);
+            _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and invalid topK: {topK}");
+            var result = await _memoryQueryService.QueryAsync(input);
 
             // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("error");
-            result.Results.ShouldBeNull();
-            result.Message.ShouldNotBeNullOrWhiteSpace();
-            result.Message.ShouldContain("greater than 0");
+            result.IsFailed.ShouldBeTrue();
+            result.Errors.ShouldNotBeEmpty();
+            result.Errors.First().Message.ShouldContain("greater than 0");
         }
 
         [Fact]
-        public async Task QueryMemoryTool_WithEmptyQueryText_ReturnsError()
+        public async Task QueryMemoryService_WithEmptyQueryText_ReturnsError()
         {
             // Arrange
             var queryText = "";
             var topK = 5;
             var input = new McpQueryInput(queryText, topK);
 
-            // Get the QueryMemoryTool instance from the service provider
-            var queryMemoryTool = _serviceProvider.GetRequiredService<QueryMemoryTool>();
-
             // Act
-            _output.WriteLine($"Executing QueryMemoryAsync with empty query text");
-            var result = await queryMemoryTool.QueryMemoryAsync(input);
+            _output.WriteLine($"Executing QueryAsync with empty query text");
+            var result = await _memoryQueryService.QueryAsync(input);
 
             // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("error");
-            result.Results.ShouldBeNull();
-            result.Message.ShouldNotBeNullOrWhiteSpace();
-            result.Message.ShouldContain("empty");
+            result.IsFailed.ShouldBeTrue();
+            result.Errors.ShouldNotBeEmpty();
+            result.Errors.First().Message.ShouldContain("empty");
         }
 
         [Fact]
-        public async Task QueryMemoryTool_VerifyEmbeddingServiceIntegration()
+        public async Task QueryMemoryService_VerifyEmbeddingServiceIntegration()
         {
             // Arrange
             var queryText = "Test query to verify embedding service integration";
@@ -135,7 +133,7 @@ namespace MemoryCore.Tests.Integration
             await CreateTestMemorygramsAsync();
 
             // Get the embedding service to verify the embedding generation
-            var embeddingService = _serviceProvider.GetRequiredService<IEmbeddingService>();
+            var embeddingService = _scopedServiceProvider.GetRequiredService<IEmbeddingService>();
             
             // Act - Get the embedding directly from the service
             var embeddingResult = await embeddingService.GetEmbeddingAsync(queryText);
@@ -147,17 +145,16 @@ namespace MemoryCore.Tests.Integration
             queryVector.Length.ShouldBeGreaterThan(0);
             
             // Now test the full query flow
-            var queryMemoryTool = _serviceProvider.GetRequiredService<QueryMemoryTool>();
-            var result = await queryMemoryTool.QueryMemoryAsync(input);
+            var result = await _memoryQueryService.QueryAsync(input);
             
             // Verify the query was successful
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("success");
+            result.IsSuccess.ShouldBeTrue();
+            result.Value.Status.ShouldBe("success");
             
             // Verify results have similarity scores
-            if (result.Results != null && result.Results.Count > 0)
+            if (result.Value.Results != null && result.Value.Results.Count > 0)
             {
-                foreach (var item in result.Results)
+                foreach (var item in result.Value.Results)
                 {
                     item.Score.ShouldBeGreaterThan(0);
                 }
@@ -165,7 +162,7 @@ namespace MemoryCore.Tests.Integration
         }
         
         [Fact]
-        public async Task QueryMemoryTool_WithLargeTopK_LimitsResults()
+        public async Task QueryMemoryService_WithLargeTopK_LimitsResults()
         {
             // Arrange
             var queryText = "Test query with large topK value";
@@ -175,20 +172,18 @@ namespace MemoryCore.Tests.Integration
             // Create a small number of test memorygrams
             await CreateTestMemorygramsAsync();
             
-            // Get the QueryMemoryTool instance
-            var queryMemoryTool = _serviceProvider.GetRequiredService<QueryMemoryTool>();
-            
             // Act
-            _output.WriteLine($"Executing QueryMemoryAsync with query: '{queryText}' and large topK: {topK}");
-            var result = await queryMemoryTool.QueryMemoryAsync(input);
+            _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and large topK: {topK}");
+            var result = await _memoryQueryService.QueryAsync(input);
             
             // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("success");
-            result.Results.ShouldNotBeNull();
+            result.IsSuccess.ShouldBeTrue();
+            result.Value.ShouldNotBeNull();
+            result.Value.Status.ShouldBe("success");
+            result.Value.Results.ShouldNotBeNull();
             
             // We should get results back but not more than we created
-            result.Results.Count.ShouldBeLessThanOrEqualTo(5); // We created 5 test memorygrams
+            result.Value.Results.Count.ShouldBeLessThanOrEqualTo(5); // We created 5 test memorygrams
         }
 
         private async Task<List<Guid>> CreateTestMemorygramsAsync()
@@ -203,18 +198,23 @@ namespace MemoryCore.Tests.Integration
                 "Completely unrelated content that shouldn't match well"
             };
 
-            var repository = _serviceProvider.GetRequiredService<IMemorygramRepository>();
+            var repository = _scopedServiceProvider.GetRequiredService<IMemorygramRepository>();
+            var embeddingService = _scopedServiceProvider.GetRequiredService<IEmbeddingService>();
             
             foreach (var content in contents)
             {
-                // Create a memorygram with the test content
-                // Create a mock embedding vector that will be replaced by the service
-                var mockEmbedding = new float[1024];
+
+                var embeddingResult = await embeddingService.GetEmbeddingAsync(content);
+                if (embeddingResult.IsFailed)
+                {
+                    _output.WriteLine($"Failed to get embedding for content: {content}");
+                    continue;
+                }
                 
                 var memorygram = new Memorygram(
                     Guid.NewGuid(),
                     content,
-                    mockEmbedding,
+                    embeddingResult.Value,
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow
                 );
@@ -226,6 +226,9 @@ namespace MemoryCore.Tests.Integration
                 }
             }
 
+            // Give Neo4j a moment to index the vectors
+            await Task.Delay(500);
+            
             return createdIds;
         }
     }
