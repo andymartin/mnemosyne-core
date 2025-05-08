@@ -12,6 +12,7 @@ using Polly.Timeout;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerUI;
 using System.Net.Http;
+using ModelContextProtocol.Server;
 
 public partial class Program
 {
@@ -68,6 +69,10 @@ builder.Services.AddHttpClient<IEmbeddingService, HttpEmbeddingService>((service
 // Add repository and services
 builder.Services.TryAddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
 builder.Services.TryAddSingleton<IMemorygramService, MemorygramService>();
+
+// Register MCP server
+builder.Services.AddMcpServer()
+    .WithToolsFromAssembly(); // Will automatically discover and register any MCP tools defined in the assembly
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
