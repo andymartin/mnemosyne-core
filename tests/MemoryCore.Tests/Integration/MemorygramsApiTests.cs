@@ -5,20 +5,30 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using MemoryCore.Controllers;
 using MemoryCore.Models;
+using MemoryCore.Tests.Fixtures;
 using Xunit;
 using Shouldly;
 using System.Text.Json;
 
 namespace MemoryCore.Tests.Integration
 {
-    public class MemorygramsApiTests : IClassFixture<CustomWebApplicationFactory>
+    [Collection("TestContainerCollection")]
+    public class MemorygramsApiTests
     {
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
+        private readonly Neo4jContainerFixture _neo4jFixture;
+        private readonly EmbeddingServiceContainerFixture _embeddingFixture;
 
-        public MemorygramsApiTests(CustomWebApplicationFactory factory)
+        public MemorygramsApiTests(
+            Neo4jContainerFixture neo4jFixture,
+            EmbeddingServiceContainerFixture embeddingFixture)
         {
-            _factory = factory;
+            _neo4jFixture = neo4jFixture;
+            _embeddingFixture = embeddingFixture;
+            
+            // Create a factory that uses the fixtures
+            _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
             _client = _factory.CreateClient();
         }
 

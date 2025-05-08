@@ -6,6 +6,7 @@ using FluentResults;
 using MemoryCore.Interfaces;
 using MemoryCore.Mcp;
 using MemoryCore.Models;
+using MemoryCore.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 using Moq;
@@ -15,7 +16,8 @@ using Xunit.Abstractions;
 
 namespace MemoryCore.Tests.Integration
 {
-    public class QueryMemoryIntegrationTests : IClassFixture<CustomWebApplicationFactory>, IDisposable
+    [Collection("TestContainerCollection")]
+    public class QueryMemoryIntegrationTests : IDisposable
     {
         private readonly CustomWebApplicationFactory _factory;
         private readonly ITestOutputHelper _output;
@@ -23,11 +25,20 @@ namespace MemoryCore.Tests.Integration
         private readonly IServiceScope _scope;
         private readonly IServiceProvider _scopedServiceProvider;
         private readonly IMemoryQueryService _memoryQueryService;
+        private readonly Neo4jContainerFixture _neo4jFixture;
+        private readonly EmbeddingServiceContainerFixture _embeddingFixture;
 
-        public QueryMemoryIntegrationTests(CustomWebApplicationFactory factory, ITestOutputHelper output)
+        public QueryMemoryIntegrationTests(
+            ITestOutputHelper output,
+            Neo4jContainerFixture neo4jFixture,
+            EmbeddingServiceContainerFixture embeddingFixture)
         {
-            _factory = factory;
             _output = output;
+            _neo4jFixture = neo4jFixture;
+            _embeddingFixture = embeddingFixture;
+            
+            // Create a factory that uses the fixtures
+            _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
             _client = _factory.CreateClient();
             
             // Create a scope to resolve scoped services
