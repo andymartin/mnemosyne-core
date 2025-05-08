@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using DotNet.Testcontainers.Containers;
+using MemoryCore.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions; // Added for TryRemove
 using Neo4j.Driver;
 using Testcontainers.Neo4j;
 
@@ -36,6 +39,10 @@ namespace MemoryCore.Tests.Integration
                 {
                     return GraphDatabase.Driver(_neo4jContainer.GetConnectionString(), AuthTokens.Basic("neo4j", "neo4j"));
                 });
+
+                // Remove the original IEmbeddingService registration and add the mock
+                services.RemoveAll<IEmbeddingService>();
+                services.AddSingleton<IEmbeddingService, MockEmbeddingService>();
             });
         }
 
