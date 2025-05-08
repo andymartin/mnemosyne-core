@@ -1,0 +1,59 @@
+using MemoryCore.Services;
+using MemoryCore.Interfaces;
+using MemoryCore.Persistence;
+using Neo4j.Driver;
+using FluentResults;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.SwaggerUI;
+
+public partial class Program
+{
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+
+// Configure Neo4j driver
+builder.Services.AddSingleton<IDriver>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return Neo4jService.ConfigureNeo4jDriver(configuration);
+});
+
+// Add repository and services
+builder.Services.TryAddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
+builder.Services.TryAddSingleton<IMemorygramService, MemorygramService>();
+
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "MemoryCore API", Version = "v1" });
+    
+    // Include XML comments for API documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+});
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MemoryCore API V1");
+    });
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+    }
+}
