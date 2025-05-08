@@ -1,6 +1,5 @@
 using MemoryCore.Interfaces;
 using MemoryCore.Mcp;
-using MemoryCore.Models;
 using MemoryCore.Services;
 using MemoryCore.Tests.Fixtures;
 using Microsoft.AspNetCore.Hosting;
@@ -8,9 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Neo4j.Driver;
-using Testcontainers.Neo4j;
 
 namespace MemoryCore.Tests.Integration
 {
