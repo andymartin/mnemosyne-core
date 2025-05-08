@@ -43,7 +43,14 @@ namespace MemoryCore.Tests.Integration
             content.ShouldNotBeNull();
             content!.Id.ShouldNotBe(Guid.Empty);
             content.Content.ShouldBe(request.Content);
-            content.VectorEmbedding.ShouldBe(request.VectorEmbedding);
+
+            // Expected embedding from MockEmbeddingService
+            var expectedEmbedding = new float[1024];
+            for (int i = 0; i < expectedEmbedding.Length; i++)
+            {
+                expectedEmbedding[i] = (float)i / 1000;
+            }
+            content.VectorEmbedding.ShouldBe(expectedEmbedding);
         }
 
         [Fact]
@@ -71,7 +78,14 @@ namespace MemoryCore.Tests.Integration
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(createRequest.Content);
-            content.VectorEmbedding.ShouldBe(createRequest.VectorEmbedding);
+            
+            // Expected embedding from MockEmbeddingService
+            var expectedEmbedding = new float[1024];
+            for (int i = 0; i < expectedEmbedding.Length; i++)
+            {
+                expectedEmbedding[i] = (float)i / 1000;
+            }
+            content.VectorEmbedding.ShouldBe(expectedEmbedding);
         }
 
         [Fact]
@@ -134,7 +148,14 @@ namespace MemoryCore.Tests.Integration
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(patchRequest.Content);
-            content.VectorEmbedding.ShouldBe(createRequest.VectorEmbedding); // VectorEmbedding should remain unchanged
+
+            // Expected embedding from MockEmbeddingService (should be the original one, as PATCH doesn't update it here)
+            var expectedEmbedding = new float[1024];
+            for (int i = 0; i < expectedEmbedding.Length; i++)
+            {
+                expectedEmbedding[i] = (float)i / 1000;
+            }
+            content.VectorEmbedding.ShouldBe(expectedEmbedding);
         }
 
         [Fact]
@@ -290,9 +311,16 @@ namespace MemoryCore.Tests.Integration
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(updateRequest.Content);
-            content.VectorEmbedding.ShouldBe(updateRequest.VectorEmbedding);
+
+            // Expected embedding from MockEmbeddingService (PUT updates the embedding)
+            var expectedEmbedding = new float[1024];
+            for (int i = 0; i < expectedEmbedding.Length; i++)
+            {
+                expectedEmbedding[i] = (float)i / 1000;
+            }
+            content.VectorEmbedding.ShouldBe(expectedEmbedding);
         }
-    
+
         [Fact]
         public async Task UpdateMemorygram_WithNonExistingId_ReturnsNotFound()
         {
