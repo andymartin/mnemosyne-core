@@ -9,19 +9,37 @@ namespace MemoryCore.Services
     public class MemorygramService : IMemorygramService
     {
         private readonly IMemorygramRepository _repository;
+        private readonly IEmbeddingService _embeddingService;
         private readonly ILogger<MemorygramService> _logger;
 
-        public MemorygramService(IMemorygramRepository repository, ILogger<MemorygramService> logger)
+        public MemorygramService(
+            IMemorygramRepository repository,
+            IEmbeddingService embeddingService,
+            ILogger<MemorygramService> logger)
         {
-            _repository = repository;
-            _logger = logger;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<Result<Memorygram>> CreateOrUpdateMemorygramAsync(Memorygram memorygram)
         {
             try
             {
-                return await _repository.CreateOrUpdateMemorygramAsync(memorygram);
+                // Generate embedding for the memorygram content
+                var embeddingResult = await _embeddingService.GetEmbeddingAsync(memorygram.Content);
+                
+                if (embeddingResult.IsFailed)
+                {
+                    _logger.LogError("Failed to generate embedding: {Errors}", string.Join(", ", embeddingResult.Errors));
+                    return Result.Fail<Memorygram>(embeddingResult.Errors);
+                }
+                
+                // Create a new memorygram with the embedding
+                var memorgramWithEmbedding = memorygram with { VectorEmbedding = embeddingResult.Value };
+                
+                // Store the memorygram with its embedding
+                return await _repository.CreateOrUpdateMemorygramAsync(memorgramWithEmbedding);
             }
             catch (Exception ex)
             {
