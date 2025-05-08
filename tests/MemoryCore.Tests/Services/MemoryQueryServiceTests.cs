@@ -71,7 +71,7 @@ namespace MemoryCore.Tests.Services
             result.Value.Message.ShouldBeNull();
 
             _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-            _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, input.TopK.Value), Times.Once);
+            _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, input.TopK!.Value), Times.Once);
         }
 
         [Fact]

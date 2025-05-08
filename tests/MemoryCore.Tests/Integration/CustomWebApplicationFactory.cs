@@ -1,14 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using DotNet.Testcontainers.Containers;
 using MemoryCore.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions; // Added for TryRemove
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Neo4j.Driver;
 using Testcontainers.Neo4j;
 
@@ -16,7 +10,7 @@ namespace MemoryCore.Tests.Integration
 {
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
-        private readonly Neo4jContainer _neo4jContainer = new Neo4jBuilder().Build();
+        private readonly Neo4jContainer _neo4jContainer = new Neo4jBuilder().WithImage("neo4j:latest").Build();
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
