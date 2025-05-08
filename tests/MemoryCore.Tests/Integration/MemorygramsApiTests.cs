@@ -22,6 +22,16 @@ namespace MemoryCore.Tests.Integration
             _client = _factory.CreateClient();
         }
 
+        private async Task<Memorygram> CreateMemorygramAndDeserializeAsync(CreateMemorygramRequest request, HttpStatusCode expectedStatusCode = HttpStatusCode.Created)
+        {
+            var response = await _client.PostAsJsonAsync("/memorygrams", request);
+            response.StatusCode.ShouldBe(expectedStatusCode, $"Failed to create memorygram for test setup. Status: {response.StatusCode}, Reason: {response.ReasonPhrase}, Content: {await response.Content.ReadAsStringAsync()}");
+            
+            var memorygram = await response.Content.ReadFromJsonAsync<Memorygram>();
+            memorygram.ShouldNotBeNull("Deserialized memorygram should not be null after a successful creation.");
+            return memorygram!;
+        }
+
         [Fact]
         public async Task CreateMemorygram_ReturnsCreatedResult()
         {
@@ -64,9 +74,8 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
             };
 
-            var createResponse = await _client.PostAsJsonAsync("/memorygrams", createRequest);
-            var createdMemorygram = await createResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var id = createdMemorygram!.Id.ToString();
+            var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
+            var id = createdMemorygram.Id.ToString();
 
             // Act
             var response = await _client.GetAsync($"/memorygrams/{id}");
@@ -128,9 +137,8 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.7f, 0.8f, 0.9f }
             };
 
-            var createResponse = await _client.PostAsJsonAsync("/memorygrams", createRequest);
-            var createdMemorygram = await createResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var id = createdMemorygram!.Id.ToString();
+            var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
+            var id = createdMemorygram.Id.ToString();
 
             // Create patch request with updated content only
             var patchRequest = new UpdateMemorygramRequest
@@ -186,9 +194,8 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
             };
 
-            var sourceCreateResponse = await _client.PostAsJsonAsync("/memorygrams", sourceCreateRequest);
-            var sourceMemorygram = await sourceCreateResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var sourceId = sourceMemorygram!.Id.ToString();
+            var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
+            var sourceId = sourceMemorygram.Id.ToString();
 
             // Create the target memorygram
             var targetCreateRequest = new CreateMemorygramRequest
@@ -196,10 +203,8 @@ namespace MemoryCore.Tests.Integration
                 Content = "Target memorygram for association",
                 VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
             };
-
-            var targetCreateResponse = await _client.PostAsJsonAsync("/memorygrams", targetCreateRequest);
-            var targetMemorygram = await targetCreateResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var targetId = targetMemorygram!.Id;
+            var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
+            var targetId = targetMemorygram.Id;
 
             // Create association request
             var associationRequest = new CreateAssociationRequest
@@ -232,9 +237,8 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
             };
 
-            var targetCreateResponse = await _client.PostAsJsonAsync("/memorygrams", targetCreateRequest);
-            var targetMemorygram = await targetCreateResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var targetId = targetMemorygram!.Id;
+            var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
+            var targetId = targetMemorygram.Id;
 
             // Create association request
             var associationRequest = new CreateAssociationRequest
@@ -261,9 +265,8 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
             };
 
-            var sourceCreateResponse = await _client.PostAsJsonAsync("/memorygrams", sourceCreateRequest);
-            var sourceMemorygram = await sourceCreateResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var sourceId = sourceMemorygram!.Id.ToString();
+            var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
+            var sourceId = sourceMemorygram.Id.ToString();
 
             // Create association request with non-existing target
             var associationRequest = new CreateAssociationRequest
@@ -290,10 +293,9 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
             };
     
-            var createResponse = await _client.PostAsJsonAsync("/memorygrams", createRequest);
-            var createdMemorygram = await createResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var id = createdMemorygram!.Id.ToString();
-    
+            var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
+            var id = createdMemorygram.Id.ToString();
+
             // Create update request with new content and embedding
             var updateRequest = new UpdateMemorygramRequest
             {
@@ -350,10 +352,9 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
             };
     
-            var createResponse = await _client.PostAsJsonAsync("/memorygrams", createRequest);
-            var createdMemorygram = await createResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var id = createdMemorygram!.Id.ToString();
-    
+            var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
+            var id = createdMemorygram.Id.ToString();
+
             // Create update request with empty content
             var updateRequest = new UpdateMemorygramRequest
             {
@@ -379,10 +380,9 @@ namespace MemoryCore.Tests.Integration
                 VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
             };
     
-            var createResponse = await _client.PostAsJsonAsync("/memorygrams", createRequest);
-            var createdMemorygram = await createResponse.Content.ReadFromJsonAsync<Memorygram>();
-            var id = createdMemorygram!.Id.ToString();
-    
+            var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
+            var id = createdMemorygram.Id.ToString();
+
             // Create empty update request
             var updateRequest = new UpdateMemorygramRequest();
     
