@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
+using System.Text.Json;
 
 namespace MemoryCore.Tests.Controllers
 {
@@ -18,9 +20,11 @@ namespace MemoryCore.Tests.Controllers
         private readonly IMemorygramService _memorygramService;
         private readonly ILogger<MemorygramsController> _logger;
         private readonly MemorygramsController _controller;
+        private readonly ITestOutputHelper _output;
 
-        public MemorygramsControllerTests()
+        public MemorygramsControllerTests(ITestOutputHelper output)
         {
+            _output = output;
             _memorygramService = Substitute.For<IMemorygramService>();
             _logger = Substitute.For<ILogger<MemorygramsController>>();
             _controller = new MemorygramsController(_memorygramService, _logger);
@@ -32,8 +36,7 @@ namespace MemoryCore.Tests.Controllers
             // Arrange
             var request = new CreateMemorygramRequest
             {
-                Content = "Test content",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Test content"
             };
 
             var expectedGuid = Guid.NewGuid();
@@ -54,7 +57,7 @@ namespace MemoryCore.Tests.Controllers
             var expectedMemorygram = new Memorygram(
                 expectedGuid,
                 request.Content,
-                request.VectorEmbedding,
+                Array.Empty<float>(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
             );
@@ -74,8 +77,7 @@ namespace MemoryCore.Tests.Controllers
             createdResult.Value.ShouldBe(expectedMemorygram);
 
             await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
-                m.Content == request.Content &&
-                m.VectorEmbedding == request.VectorEmbedding));
+                m.Content == request.Content));
         }
 
         [Fact]
@@ -84,8 +86,7 @@ namespace MemoryCore.Tests.Controllers
             // Arrange
             var request = new CreateMemorygramRequest
             {
-                Content = "",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = ""
             };
 
             // Act
@@ -107,8 +108,7 @@ namespace MemoryCore.Tests.Controllers
             // Arrange
             var request = new CreateMemorygramRequest
             {
-                Content = "Test content",
-                VectorEmbedding = null
+                Content = "Test content"
             };
 
             var expectedGuid = Guid.NewGuid();
@@ -231,8 +231,7 @@ namespace MemoryCore.Tests.Controllers
             var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var request = new UpdateMemorygramRequest
             {
-                Content = "Updated content",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = "Updated content"
             };
 
             var existingMemorygram = new Memorygram(
@@ -246,7 +245,7 @@ namespace MemoryCore.Tests.Controllers
             var updatedMemorygram = new Memorygram(
                 guidId,
                 request.Content,
-                request.VectorEmbedding,
+                existingMemorygram.VectorEmbedding,
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
             );
@@ -269,8 +268,7 @@ namespace MemoryCore.Tests.Controllers
             await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
             await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
                 m.Id == guidId &&
-                m.Content == request.Content &&
-                m.VectorEmbedding == request.VectorEmbedding));
+                m.Content == request.Content));
         }
 
         [Fact]
@@ -327,11 +325,7 @@ namespace MemoryCore.Tests.Controllers
         {
             // Arrange
             var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var request = new UpdateMemorygramRequest
-            {
-                Content = null,
-                VectorEmbedding = null
-            };
+            var request = new UpdateMemorygramRequest();
 
             var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var existingMemorygram = new Memorygram(
@@ -356,7 +350,14 @@ namespace MemoryCore.Tests.Controllers
             result.ShouldBeOfType<BadRequestObjectResult>();
             var badRequestResult = (BadRequestObjectResult)result;
             badRequestResult.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
-            badRequestResult.Value.ShouldBe("No update parameters provided (Content or VectorEmbedding).");
+            
+            // Check the structure of the error response
+            var errorObj = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                JsonSerializer.Serialize(badRequestResult.Value));
+            
+            errorObj.ShouldNotBeNull();
+            errorObj["Error"].ShouldBe("InvalidRequest");
+            errorObj["Message"].ShouldBe("Content must be provided and cannot be empty");
 
             await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
             await _memorygramService.DidNotReceive().CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>());
@@ -404,8 +405,7 @@ namespace MemoryCore.Tests.Controllers
             var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var request = new UpdateMemorygramRequest
             {
-                Content = "Patched content",
-                VectorEmbedding = null // Only update content, not embedding
+                Content = "Patched content"
             };
 
             var existingMemorygram = new Memorygram(
@@ -521,7 +521,14 @@ namespace MemoryCore.Tests.Controllers
             result.ShouldBeOfType<BadRequestObjectResult>();
             var badRequestResult = (BadRequestObjectResult)result;
             badRequestResult.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
-            badRequestResult.Value.ShouldBe("No update parameters provided (Content or VectorEmbedding).");
+            
+            // Check the structure of the error response
+            var errorObj = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                JsonSerializer.Serialize(badRequestResult.Value));
+            
+            errorObj.ShouldNotBeNull();
+            errorObj["Error"].ShouldBe("InvalidRequest");
+            errorObj["Message"].ShouldBe("Content must be provided and cannot be empty");
 
             await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
             await _memorygramService.DidNotReceive().CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>());

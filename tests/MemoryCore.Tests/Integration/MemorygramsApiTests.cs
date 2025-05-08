@@ -38,8 +38,7 @@ namespace MemoryCore.Tests.Integration
             // Arrange
             var request = new CreateMemorygramRequest
             {
-                Content = "Test API create content",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Test API create content"
             };
 
             // Act
@@ -70,8 +69,7 @@ namespace MemoryCore.Tests.Integration
             // Create the memorygram first
             var createRequest = new CreateMemorygramRequest
             {
-                Content = "Test API get content",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = "Test API get content"
             };
 
             var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -133,8 +131,7 @@ namespace MemoryCore.Tests.Integration
             // Create the memorygram first
             var createRequest = new CreateMemorygramRequest
             {
-                Content = "Test API patch content",
-                VectorEmbedding = new float[] { 0.7f, 0.8f, 0.9f }
+                Content = "Test API patch content"
             };
 
             var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -190,8 +187,7 @@ namespace MemoryCore.Tests.Integration
             // Create the source memorygram
             var sourceCreateRequest = new CreateMemorygramRequest
             {
-                Content = "Source memorygram for association",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Source memorygram for association"
             };
 
             var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
@@ -200,8 +196,7 @@ namespace MemoryCore.Tests.Integration
             // Create the target memorygram
             var targetCreateRequest = new CreateMemorygramRequest
             {
-                Content = "Target memorygram for association",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = "Target memorygram for association"
             };
             var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
             var targetId = targetMemorygram.Id;
@@ -233,8 +228,7 @@ namespace MemoryCore.Tests.Integration
             // Create a valid target memorygram
             var targetCreateRequest = new CreateMemorygramRequest
             {
-                Content = "Target memorygram for association",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = "Target memorygram for association"
             };
 
             var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
@@ -261,8 +255,7 @@ namespace MemoryCore.Tests.Integration
             // Create the source memorygram
             var sourceCreateRequest = new CreateMemorygramRequest
             {
-                Content = "Source memorygram for association",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Source memorygram for association"
             };
 
             var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
@@ -289,8 +282,7 @@ namespace MemoryCore.Tests.Integration
             // Create the memorygram first
             var createRequest = new CreateMemorygramRequest
             {
-                Content = "Test API update content",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Test API update content"
             };
     
             var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -299,8 +291,7 @@ namespace MemoryCore.Tests.Integration
             // Create update request with new content and embedding
             var updateRequest = new UpdateMemorygramRequest
             {
-                Content = "Updated via PUT",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = "Updated via PUT"
             };
     
             // Act
@@ -330,8 +321,7 @@ namespace MemoryCore.Tests.Integration
             var nonExistingId = Guid.NewGuid().ToString();
             var updateRequest = new UpdateMemorygramRequest
             {
-                Content = "This won't be updated",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "This won't be updated"
             };
     
             // Act
@@ -348,8 +338,7 @@ namespace MemoryCore.Tests.Integration
             // Create the memorygram first
             var createRequest = new CreateMemorygramRequest
             {
-                Content = "Test API update content",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Test API update content"
             };
     
             var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -358,8 +347,7 @@ namespace MemoryCore.Tests.Integration
             // Create update request with empty content
             var updateRequest = new UpdateMemorygramRequest
             {
-                Content = "",
-                VectorEmbedding = new float[] { 0.4f, 0.5f, 0.6f }
+                Content = ""
             };
     
             // Act
@@ -376,8 +364,7 @@ namespace MemoryCore.Tests.Integration
             // Create the memorygram first
             var createRequest = new CreateMemorygramRequest
             {
-                Content = "Test API update content",
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = "Test API update content"
             };
     
             var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -400,8 +387,7 @@ namespace MemoryCore.Tests.Integration
             var maxContent = new string('a', 10000); // Assuming 10k is max length
             var request = new CreateMemorygramRequest
             {
-                Content = maxContent,
-                VectorEmbedding = new float[] { 0.1f, 0.2f, 0.3f }
+                Content = maxContent
             };
 
             // Act

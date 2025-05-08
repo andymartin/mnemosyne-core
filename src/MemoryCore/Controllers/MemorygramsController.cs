@@ -43,7 +43,7 @@ namespace MemoryCore.Controllers
                 var memorygram = new Memorygram(
                     Guid.NewGuid(),
                     request.Content,
-                    request.VectorEmbedding ?? Array.Empty<float>(),
+                    Array.Empty<float>(),
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow
                 );
@@ -148,21 +148,20 @@ namespace MemoryCore.Controllers
 
             var existingMemorygram = existingMemorygramResult.Value;
 
-            // Validate at least one non-empty update parameter
-            if ((string.IsNullOrWhiteSpace(request.Content) || request.Content == string.Empty)
-                && request.VectorEmbedding == null)
+            // Validate content is not empty
+            if (string.IsNullOrWhiteSpace(request.Content) || request.Content == string.Empty)
             {
                 return BadRequest(new {
                     Error = "InvalidRequest",
-                    Message = "At least one valid update parameter must be provided (non-empty Content or VectorEmbedding)"
+                    Message = "Content must be provided and cannot be empty"
                 });
             }
 
             // Create a new Memorygram object with updated values
             var updatedMemorygram = new Memorygram(
                 existingMemorygram.Id,
-                request.Content ?? existingMemorygram.Content, // Use new content if provided, otherwise keep existing
-                request.VectorEmbedding ?? existingMemorygram.VectorEmbedding, // Use new embedding if provided, otherwise keep existing
+                request.Content,
+                existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
             );
@@ -230,21 +229,20 @@ namespace MemoryCore.Controllers
 
             var existingMemorygram = existingMemorygramResult.Value;
 
-            // Validate at least one non-empty update parameter
-            if ((string.IsNullOrWhiteSpace(request.Content) || request.Content == string.Empty)
-                && request.VectorEmbedding == null)
+            // Validate content is not empty
+            if (string.IsNullOrWhiteSpace(request.Content) || request.Content == string.Empty)
             {
                 return BadRequest(new {
                     Error = "InvalidRequest",
-                    Message = "At least one valid update parameter must be provided (non-empty Content or VectorEmbedding)"
+                    Message = "Content must be provided and cannot be empty"
                 });
             }
 
             // Create a new Memorygram object with updated values
             var updatedMemorygram = new Memorygram(
                 existingMemorygram.Id,
-                request.Content ?? existingMemorygram.Content, // Use new content if provided, otherwise keep existing
-                request.VectorEmbedding ?? existingMemorygram.VectorEmbedding, // Use new embedding if provided, otherwise keep existing
+                request.Content,
+                existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
             );
@@ -355,13 +353,11 @@ namespace MemoryCore.Controllers
         [Required(ErrorMessage = "Content is required")]
         [StringLength(10000, ErrorMessage = "Content cannot exceed 10000 characters")]
         public string Content { get; set; } = string.Empty;
-        public float[]? VectorEmbedding { get; set; }
     }
 
     public class CreateMemorygramRequest
     {
         public string Content { get; set; } = string.Empty;
-        public float[]? VectorEmbedding { get; set; }
     }
 
     /// <summary>
