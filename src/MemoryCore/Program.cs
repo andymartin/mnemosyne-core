@@ -72,7 +72,7 @@ builder.Services.TryAddSingleton<IMemorygramService, MemorygramService>();
 
 // Register MCP server
 builder.Services.AddMcpServer()
-    .WithToolsFromAssembly(); // Will automatically discover and register any MCP tools defined in the assembly
+    .WithToolsFromAssembly();
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
