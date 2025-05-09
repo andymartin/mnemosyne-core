@@ -1,3 +1,4 @@
+using MemoryCore.Controllers;
 using MemoryCore.Interfaces;
 using MemoryCore.Models;
 using MemoryCore.Persistence;
@@ -17,6 +18,7 @@ public partial class Program
 
         // Add services to the container.
         builder.Services.AddControllers();
+        builder.Services.AddSignalR();
 
         // Configure Neo4j driver
         builder.Services.AddSingleton<IDriver>(sp =>
@@ -119,7 +121,9 @@ public partial class Program
 
         app.UseHttpsRedirection();
         app.UseAuthorization();
+        app.UseWebSockets();
         app.MapControllers();
+        app.MapHub<ChatHub>("/ws/chat");
         app.Run();
     }
 }
