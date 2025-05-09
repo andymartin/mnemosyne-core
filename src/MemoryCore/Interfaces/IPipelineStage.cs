@@ -2,7 +2,7 @@ using Mnemosyne.Core.Models.Pipelines;
 
 namespace Mnemosyne.Core.Interfaces
 {
-    public interface IPipelineComponent
+    public interface IPipelineStage
     {
         string Name { get; }
         

@@ -199,8 +199,8 @@ public class PipelinesService : IPipelinesService
                 status.CurrentStageStartTime = DateTime.UtcNow; // Consider DateTimeOffset.UtcNow
                 _logger.LogInformation("RunId {RunId}: Entering stage: {StageName}", runId, status.CurrentStageName);
 
-                // In a real scenario, resolve and execute IPipelineComponent here
-                // var component = _serviceProvider.GetKeyedService<IPipelineComponent>(componentConfig.Type);
+                // In a real scenario, resolve and execute IPipelineStage here
+                // var component = _serviceProvider.GetKeyedService<IPipelineStage>(componentConfig.Type);
                 // if (component != null) { 
                 //    var stageResult = await component.ExecuteAsync(executionState, status); 
                 //    executionState.CurrentResult = stageResult; // Or handle result appropriately

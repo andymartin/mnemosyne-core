@@ -3,9 +3,9 @@ using Shouldly;
 
 namespace Mnemosyne.Core.Tests.Models.Pipelines;
 
-public class PipelineComponentTests
+public class PipelineStageTests
 {
-    private class TestPipelineComponent : PipelineComponent
+    private class TestPipelineStage : PipelineStage
     {
         public bool InternalExecuteCalled { get; private set; }
         public PipelineExecutionState? ReceivedState { get; private set; }
@@ -26,17 +26,17 @@ public class PipelineComponentTests
     public void PipelineComponent_Constructor_SetsNameCorrectly()
     {
         // Arrange & Act
-        var component = new TestPipelineComponent();
+        var component = new TestPipelineStage();
 
         // Assert
-        component.Name.ShouldBe(nameof(TestPipelineComponent));
+        component.Name.ShouldBe(nameof(TestPipelineStage));
     }
 
     [Fact]
     public async Task ExecuteAsync_SetsCurrentStageNameAndStartTime_AndCallsExecuteInternal()
     {
         // Arrange
-        var component = new TestPipelineComponent();
+        var component = new TestPipelineStage();
         var request = new PipelineExecutionRequest
         {
             UserInput = "test input",
