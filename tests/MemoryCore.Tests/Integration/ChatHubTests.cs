@@ -1,9 +1,7 @@
-using MemoryCore.Controllers;
-using MemoryCore.Tests.Fixtures;
 using Microsoft.AspNetCore.SignalR.Client;
-using Xunit;
+using Mnemosyne.Core.Tests.Fixtures;
 
-namespace MemoryCore.Tests.Integration
+namespace Mnemosyne.Core.Tests.Integration
 {
     [Collection("TestContainerCollection")]
     public class ChatHubTests : IClassFixture<ChatHubFixture>

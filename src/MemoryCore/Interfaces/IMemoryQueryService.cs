@@ -1,8 +1,7 @@
 using FluentResults;
-using MemoryCore.Models;
-using System.Threading.Tasks;
+using Mnemosyne.Core.Models;
 
-namespace MemoryCore.Interfaces
+namespace Mnemosyne.Core.Interfaces
 {
     /// <summary>
     /// Service interface for querying memory using vector similarity

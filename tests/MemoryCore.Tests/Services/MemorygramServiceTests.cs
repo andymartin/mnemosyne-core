@@ -1,14 +1,11 @@
-using System;
-using System.Threading.Tasks;
 using FluentResults;
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
-using MemoryCore.Services;
 using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Services;
 using Moq;
-using Xunit;
 
-namespace MemoryCore.Tests.Services
+namespace Mnemosyne.Core.Tests.Services
 {
     public class MemorygramServiceTests
     {

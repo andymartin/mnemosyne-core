@@ -1,14 +1,9 @@
-using System;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using FluentResults;
-using MemoryCore.Interfaces;
-using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Interfaces;
 
-namespace MemoryCore.Services
+namespace Mnemosyne.Core.Services
 {
     public class HttpEmbeddingService : IEmbeddingService
     {

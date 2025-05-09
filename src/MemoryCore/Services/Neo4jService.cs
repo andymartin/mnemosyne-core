@@ -1,7 +1,7 @@
 using FluentResults;
 using Neo4j.Driver;
 
-namespace MemoryCore.Services
+namespace Mnemosyne.Core.Services
 {
     public class Neo4jService
     {
@@ -76,7 +76,7 @@ namespace MemoryCore.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initializing Neo4j schema");
+                _logger.LogError(ex, "Message initializing Neo4j schema");
                 return Result.Fail(new Error("Failed to initialize Neo4j schema").CausedBy(ex));
             }
         }

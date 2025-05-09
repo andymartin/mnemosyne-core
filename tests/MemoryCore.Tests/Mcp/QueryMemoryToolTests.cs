@@ -1,17 +1,13 @@
 using FluentResults;
-using MemoryCore.Interfaces;
-using MemoryCore.Mcp;
-using MemoryCore.Models;
 using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Mcp;
+using Mnemosyne.Core.Models;
 using Moq;
 using Shouldly;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Xunit;
 using Xunit.Abstractions;
 
-namespace MemoryCore.Tests.Mcp
+namespace Mnemosyne.Core.Tests.Mcp
 {
     public class QueryMemoryToolTests
     {

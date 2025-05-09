@@ -1,7 +1,7 @@
 using FluentResults;
-using MemoryCore.Interfaces;
+using Mnemosyne.Core.Interfaces;
 
-namespace MemoryCore.Tests.Integration
+namespace Mnemosyne.Core.Tests.Integration
 {
     public class MockEmbeddingService : IEmbeddingService
     {

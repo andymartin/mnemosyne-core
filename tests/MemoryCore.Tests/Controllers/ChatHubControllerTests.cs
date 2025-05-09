@@ -1,9 +1,8 @@
-using MemoryCore.Controllers;
 using Microsoft.AspNetCore.SignalR;
+using Mnemosyne.Core.Controllers;
 using Moq;
-using Xunit;
 
-namespace MemoryCore.Tests.Controllers
+namespace Mnemosyne.Core.Tests.Controllers
 {
     public class ChatHubControllerTests
     {

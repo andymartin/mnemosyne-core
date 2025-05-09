@@ -1,6 +1,4 @@
-using Xunit;
-
-namespace MemoryCore.Tests.Fixtures
+namespace Mnemosyne.Core.Tests.Fixtures
 {
     public class Neo4jContainerFixture : IAsyncLifetime
     {

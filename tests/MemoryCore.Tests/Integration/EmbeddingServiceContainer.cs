@@ -1,7 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 
-namespace MemoryCore.Tests.Integration
+namespace Mnemosyne.Core.Tests.Integration
 {
     public class EmbeddingServiceContainer : IAsyncLifetime
     {

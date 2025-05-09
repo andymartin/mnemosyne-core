@@ -1,6 +1,4 @@
-using System;
-
-namespace MemoryCore.Models
+namespace Mnemosyne.Core.Models
 {
     /// <summary>
     /// Input model for the queryMemory MCP tool

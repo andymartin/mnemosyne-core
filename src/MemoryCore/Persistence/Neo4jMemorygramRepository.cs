@@ -1,9 +1,9 @@
 using FluentResults;
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 using Neo4j.Driver;
 
-namespace MemoryCore.Persistence
+namespace Mnemosyne.Core.Persistence
 {
     public class Neo4jMemorygramRepository : IMemorygramRepository
     {
@@ -72,6 +72,45 @@ namespace MemoryCore.Persistence
             {
                 await using var session = _driver.AsyncSession();
                 
+                // First check if source memorygram exists
+                var sourceExists = await session.ExecuteReadAsync(async tx =>
+                {
+                    var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
+                    var parameters = new { id = fromId.ToString() };
+                    var cursor = await tx.RunAsync(query, parameters);
+                    if (await cursor.FetchAsync())
+                    {
+                        return cursor.Current["exists"].As<bool>();
+                    }
+                    return false;
+                });
+                
+                if (!sourceExists)
+                {
+                    _logger.LogWarning("Source Memorygram with ID {Id} not found", fromId);
+                    return Result.Fail<Memorygram>($"Memorygram with ID {fromId} not found");
+                }
+                
+                // Then check if target memorygram exists
+                var targetExists = await session.ExecuteReadAsync(async tx =>
+                {
+                    var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
+                    var parameters = new { id = toId.ToString() };
+                    var cursor = await tx.RunAsync(query, parameters);
+                    if (await cursor.FetchAsync())
+                    {
+                        return cursor.Current["exists"].As<bool>();
+                    }
+                    return false;
+                });
+                
+                if (!targetExists)
+                {
+                    _logger.LogWarning("Target Memorygram with ID {Id} not found", toId);
+                    return Result.Fail<Memorygram>($"Memorygram with ID {toId} not found");
+                }
+                
+                // If both exist, create the association
                 return await session.ExecuteWriteAsync(async tx =>
                 {
                     var query = @"
@@ -102,13 +141,13 @@ namespace MemoryCore.Persistence
                         ));
                     }
 
-                    return Result.Fail<Memorygram>("not found");
+                    return Result.Fail<Memorygram>("Failed to create association");
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create association between memorygrams {FromId} and {ToId}", fromId, toId);
-                return Result.Fail($"Database error: {ex.Message}");
+                return Result.Fail<Memorygram>($"Database error: {ex.Message}");
             }
         }
 

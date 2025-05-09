@@ -6,9 +6,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemoryCore", "src\MemoryCore\MemoryCore.csproj", "{2223CB80-030D-A3F6-7DC0-0E96ADF838C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mnemosyne.Core", "src\MemoryCore\Mnemosyne.Core.csproj", "{2223CB80-030D-A3F6-7DC0-0E96ADF838C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemoryCore.Tests", "tests\MemoryCore.Tests\MemoryCore.Tests.csproj", "{A53BA46F-6B4F-48CA-9E78-B09818E9C094}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mnemosyne.Core.Tests", "tests\MemoryCore.Tests\Mnemosyne.Core.Tests.csproj", "{A53BA46F-6B4F-48CA-9E78-B09818E9C094}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

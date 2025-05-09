@@ -1,8 +1,7 @@
 using FluentResults;
-using MemoryCore.Models;
-using System.Collections.Generic;
+using Mnemosyne.Core.Models;
 
-namespace MemoryCore.Interfaces
+namespace Mnemosyne.Core.Interfaces
 {
     public interface IMemorygramRepository
     {

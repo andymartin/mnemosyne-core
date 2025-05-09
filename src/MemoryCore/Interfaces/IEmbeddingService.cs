@@ -1,7 +1,6 @@
-using System.Threading.Tasks;
 using FluentResults;
 
-namespace MemoryCore.Interfaces
+namespace Mnemosyne.Core.Interfaces
 {
     public interface IEmbeddingService
     {
