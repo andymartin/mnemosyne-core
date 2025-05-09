@@ -1,17 +1,11 @@
-using System;
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using FluentResults;
-using MemoryCore.Services;
 using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Services;
 using Moq;
 using Moq.Protected;
-using Xunit;
 
-namespace MemoryCore.Tests.Services
+namespace Mnemosyne.Core.Tests.Services
 {
     public class HttpEmbeddingServiceTests
     {

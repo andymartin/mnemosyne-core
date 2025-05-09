@@ -1,11 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using MemoryCore.Controllers;
-using MemoryCore.Models;
-using MemoryCore.Tests.Fixtures;
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Mnemosyne.Core.Controllers;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Tests.Fixtures;
 using Shouldly;
+// Added
+// Added
 
-namespace MemoryCore.Tests.Integration
+namespace Mnemosyne.Core.Tests.Integration
 {
     [Collection("TestContainerCollection")]
     public class MemorygramsApiTests
@@ -14,6 +18,7 @@ namespace MemoryCore.Tests.Integration
         private readonly HttpClient _client;
         private readonly Neo4jContainerFixture _neo4jFixture;
         private readonly EmbeddingServiceContainerFixture _embeddingFixture;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public MemorygramsApiTests(
             Neo4jContainerFixture neo4jFixture,
@@ -22,17 +27,17 @@ namespace MemoryCore.Tests.Integration
             _neo4jFixture = neo4jFixture;
             _embeddingFixture = embeddingFixture;
             
-            // Create a factory that uses the fixtures
             _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
             _client = _factory.CreateClient();
+            _jsonOptions = _factory.Services.GetRequiredService<JsonSerializerOptions>(); // Initialize from DI
         }
 
         private async Task<Memorygram> CreateMemorygramAndDeserializeAsync(CreateMemorygramRequest request, HttpStatusCode expectedStatusCode = HttpStatusCode.Created)
         {
-            var response = await _client.PostAsJsonAsync("/memorygrams", request);
+            var response = await _client.PostAsJsonAsync("/memorygrams", request); // Uses globally configured options
             response.StatusCode.ShouldBe(expectedStatusCode, $"Failed to create memorygram for test setup. Status: {response.StatusCode}, Reason: {response.ReasonPhrase}, Content: {await response.Content.ReadAsStringAsync()}");
             
-            var memorygram = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var memorygram = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             memorygram.ShouldNotBeNull("Deserialized memorygram should not be null after a successful creation.");
             return memorygram!;
         }
@@ -53,7 +58,7 @@ namespace MemoryCore.Tests.Integration
             response.StatusCode.ShouldBe(HttpStatusCode.Created);
             response.Headers.Location.ShouldNotBeNull();
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content!.Id.ShouldNotBe(Guid.Empty);
             content.Content.ShouldBe(request.Content);
@@ -82,7 +87,7 @@ namespace MemoryCore.Tests.Integration
             // Assert
             response.StatusCode.ShouldBe(HttpStatusCode.OK);
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(createRequest.Content);
@@ -146,7 +151,7 @@ namespace MemoryCore.Tests.Integration
             // Assert
             response.StatusCode.ShouldBe(HttpStatusCode.OK);
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(patchRequest.Content);
@@ -207,7 +212,7 @@ namespace MemoryCore.Tests.Integration
             // Assert
             response.StatusCode.ShouldBe(HttpStatusCode.OK);
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(sourceId);
         }
@@ -293,7 +298,7 @@ namespace MemoryCore.Tests.Integration
             // Assert
             response.StatusCode.ShouldBe(HttpStatusCode.OK);
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content!.Id.ToString().ShouldBe(id);
             content.Content.ShouldBe(updateRequest.Content);
@@ -385,7 +390,7 @@ namespace MemoryCore.Tests.Integration
             // Assert
             response.StatusCode.ShouldBe(HttpStatusCode.Created);
             
-            var content = await response.Content.ReadFromJsonAsync<Memorygram>();
+            var content = await response.Content.ReadFromJsonAsync<Memorygram>(); // Uses globally configured options
             content.ShouldNotBeNull();
             content.Content.ShouldBe(maxContent);
         }

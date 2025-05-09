@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 WORKDIR /app
 
 # Copy project file and restore dependencies
-COPY MemoryCore.csproj ./
+COPY Mnemosyne.Core.csproj ./
 RUN dotnet restore
 
 # Copy all the project files and build
@@ -19,4 +19,4 @@ COPY --from=build-env /app/out .
 EXPOSE 80
 
 # Set the entry point to run the application
-ENTRYPOINT ["dotnet", "MemoryCore.dll"]
+ENTRYPOINT ["dotnet", "Mnemosyne.Core.dll"]

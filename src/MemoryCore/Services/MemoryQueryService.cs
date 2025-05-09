@@ -1,13 +1,8 @@
 using FluentResults;
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 
-namespace MemoryCore.Services
+namespace Mnemosyne.Core.Services
 {
     /// <summary>
     /// Service for querying memory using vector similarity
@@ -100,8 +95,8 @@ namespace MemoryCore.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing memory query");
-                return Result.Fail(new Error($"Error executing memory query: {ex.Message}"));
+                _logger.LogError(ex, "Message executing memory query");
+                return Result.Fail(new Error($"Message executing memory query: {ex.Message}"));
             }
         }
     }

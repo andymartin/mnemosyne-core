@@ -1,16 +1,16 @@
 using System.Text.Json;
 using FluentResults;
-using MemoryCore.Controllers;
-using MemoryCore.Models;
-using MemoryCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Controllers;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Services;
 using NSubstitute;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace MemoryCore.Tests.Controllers
+namespace Mnemosyne.Core.Tests.Controllers
 {
     public class MemorygramsControllerTests
     {
@@ -497,7 +497,7 @@ namespace MemoryCore.Tests.Controllers
         {
             // Arrange
             var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var request = new UpdateMemorygramRequest(); // No content or embedding
+            var request = new UpdateMemorygramRequest();
 
             var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var existingMemorygram = new Memorygram(
@@ -524,7 +524,7 @@ namespace MemoryCore.Tests.Controllers
                 JsonSerializer.Serialize(badRequestResult.Value));
             
             errorObj.ShouldNotBeNull();
-            errorObj["Error"].ShouldBe("InvalidRequest");
+            errorObj["Message"].ShouldBe("InvalidRequest");
             errorObj["Message"].ShouldBe("Content must be provided and cannot be empty");
 
             await _memorygramService.Received(1).GetMemorygramByIdAsync(id);

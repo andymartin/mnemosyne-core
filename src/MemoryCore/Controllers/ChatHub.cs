@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
-using System.Threading.Tasks;
 
-namespace MemoryCore.Controllers
+namespace Mnemosyne.Core.Controllers
 {
     public class ChatHub : Hub
     {

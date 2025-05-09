@@ -1,16 +1,13 @@
-using System;
-using System.Threading.Tasks;
-using MemoryCore.Models;
-using MemoryCore.Interfaces;
-using MemoryCore.Persistence;
-using Microsoft.Extensions.Logging;
-using Neo4j.Driver;
 using FluentResults;
+using Microsoft.Extensions.Logging;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Persistence;
+using Neo4j.Driver;
 using NSubstitute;
-using Xunit;
 using Shouldly;
 
-namespace MemoryCore.Tests.Persistence
+namespace Mnemosyne.Core.Tests
 {
     public class Neo4jMemorygramRepositoryTests
     {

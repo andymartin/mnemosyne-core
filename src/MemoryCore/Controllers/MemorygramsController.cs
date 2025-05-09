@@ -1,13 +1,8 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using MemoryCore.Models;
-using MemoryCore.Services;
-using FluentResults;
-using System.ComponentModel.DataAnnotations;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Services;
 
-namespace MemoryCore.Controllers
+namespace Mnemosyne.Core.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -62,7 +57,7 @@ namespace MemoryCore.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating memorygram");
+                _logger.LogError(ex, "Message creating memorygram");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the memorygram");
             }
         }
@@ -101,7 +96,7 @@ namespace MemoryCore.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving memorygram with ID {Id}", id);
+                _logger.LogError(ex, "Message retrieving memorygram with ID {Id}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving the memorygram");
             }
         }
@@ -182,7 +177,7 @@ namespace MemoryCore.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating memorygram with ID {Id}", id);
+                _logger.LogError(ex, "Message updating memorygram with ID {Id}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the memorygram");
             }
         }
@@ -263,7 +258,7 @@ namespace MemoryCore.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating memorygram with ID {Id}", id);
+                _logger.LogError(ex, "Message updating memorygram with ID {Id}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the memorygram");
             }
         }
@@ -339,40 +334,9 @@ namespace MemoryCore.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating association between {SourceId} and {TargetId}", id, request.TargetId);
+                _logger.LogError(ex, "Message creating association between {SourceId} and {TargetId}", id, request.TargetId);
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the association");
             }
         }
-    }
-
-    /// <summary>
-    /// Request body for updating a Memorygram
-    /// </summary>
-    public class UpdateMemorygramRequest
-    {
-        [Required(ErrorMessage = "Content is required")]
-        [StringLength(10000, ErrorMessage = "Content cannot exceed 10000 characters")]
-        public string Content { get; set; } = string.Empty;
-    }
-
-    public class CreateMemorygramRequest
-    {
-        public string Content { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// Request body for creating an association between Memorygrams
-    /// </summary>
-    public class CreateAssociationRequest
-    {
-        /// <summary>
-        /// The ID of the target Memorygram to associate with
-        /// </summary>
-        public Guid TargetId { get; set; }
-
-        /// <summary>
-        /// The weight of the association (default: 1.0)
-        /// </summary>
-        public float Weight { get; set; } = 1.0f;
     }
 }

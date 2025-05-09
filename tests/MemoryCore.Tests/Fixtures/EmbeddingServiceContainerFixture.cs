@@ -1,8 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using Xunit;
 
-namespace MemoryCore.Tests.Fixtures
+namespace Mnemosyne.Core.Tests.Fixtures
 {
     public class EmbeddingServiceContainerFixture : IAsyncLifetime
     {

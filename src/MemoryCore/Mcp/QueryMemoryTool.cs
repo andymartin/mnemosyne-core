@@ -1,16 +1,15 @@
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
-using ModelContextProtocol.Server;
-using System.Threading.Tasks;
 using FluentResults;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
+using ModelContextProtocol.Server;
 
-namespace MemoryCore.Mcp
+namespace Mnemosyne.Core.Mcp
 {
     /// <summary>
     /// MCP tool for querying memory using vector similarity
     /// </summary>
     [McpServerToolType]
-    public class QueryMemoryTool
+    public class QueryMemoryTool : IQueryMemoryTool
     {
         private readonly IMemoryQueryService _memoryQueryService;
         private readonly ILogger<QueryMemoryTool> _logger;
@@ -58,7 +57,7 @@ namespace MemoryCore.Mcp
             else
             {
                 string errorMessage = string.Join(", ", result.Errors.Select(e => e.Message));
-                _logger.LogError("Error executing memory query: {ErrorMessage}", errorMessage);
+                _logger.LogError("Message executing memory query: {ErrorMessage}", errorMessage);
                 return new McpQueryResult("error", null, errorMessage);
             }
         }

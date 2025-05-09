@@ -1,11 +1,11 @@
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
-using MemoryCore.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Tests.Fixtures;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace MemoryCore.Tests.Integration
+namespace Mnemosyne.Core.Tests.Integration
 {
     [Collection("TestContainerCollection")]
     public class QueryMemoryIntegrationTests : IDisposable
@@ -164,18 +164,18 @@ namespace MemoryCore.Tests.Integration
         }
         
         [Fact]
-        public async Task QueryMemoryService_WithLargeTopK_LimitsResults()
+        public async Task QueryMemoryService_WithSpecificTopK_LimitsResults()
         {
             // Arrange
-            var queryText = "Test query with large topK value";
-            var topK = 1000; // Very large value
+            var queryText = "Test query with specific topK value";
+            var topK = 3; // Specific value to test limit
             var input = new McpQueryInput(queryText, topK);
             
-            // Create a small number of test memorygrams
+            // Create test memorygrams - more than our requested topK
             await CreateTestMemorygramsAsync();
             
             // Act
-            _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and large topK: {topK}");
+            _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and specific topK: {topK}");
             var result = await _memoryQueryService.QueryAsync(input);
             
             // Assert
@@ -184,8 +184,8 @@ namespace MemoryCore.Tests.Integration
             result.Value.Status.ShouldBe("success");
             result.Value.Results.ShouldNotBeNull();
             
-            // We should get results back but not more than we created
-            result.Value.Results.Count.ShouldBeLessThanOrEqualTo(5); // We created 5 test memorygrams
+            // We should get exactly the number of results we requested
+            result.Value.Results.Count.ShouldBe(topK);
         }
 
         private async Task<List<Guid>> CreateTestMemorygramsAsync()

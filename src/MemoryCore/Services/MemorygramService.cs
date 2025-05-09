@@ -1,10 +1,8 @@
-using System;
-using System.Threading.Tasks;
-using MemoryCore.Models;
-using MemoryCore.Interfaces;
 using FluentResults;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 
-namespace MemoryCore.Services
+namespace Mnemosyne.Core.Services
 {
     public class MemorygramService : IMemorygramService
     {
@@ -43,7 +41,7 @@ namespace MemoryCore.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating or updating memorygram");
+                _logger.LogError(ex, "Message creating or updating memorygram");
                 return Result.Fail<Memorygram>($"Service error: {ex.Message}");
             }
         }
@@ -56,7 +54,7 @@ namespace MemoryCore.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating association between {FromId} and {ToId}", fromId, toId);
+                _logger.LogError(ex, "Message creating association between {FromId} and {ToId}", fromId, toId);
                 return Result.Fail($"Service error: {ex.Message}");
             }
         }
@@ -69,16 +67,9 @@ namespace MemoryCore.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving memorygram by ID {Id}", id);
+                _logger.LogError(ex, "Message retrieving memorygram by ID {Id}", id);
                 return Result.Fail<Memorygram>($"Service error: {ex.Message}");
             }
         }
-    }
-
-    public interface IMemorygramService
-    {
-        Task<Result<Memorygram>> CreateOrUpdateMemorygramAsync(Memorygram memorygram);
-        Task<Result<Memorygram>> CreateAssociationAsync(Guid fromId, Guid toId, float weight);
-        Task<Result<Memorygram>> GetMemorygramByIdAsync(Guid id);
     }
 }

@@ -1,14 +1,19 @@
-using MemoryCore.Controllers;
-using MemoryCore.Interfaces;
-using MemoryCore.Models;
-using MemoryCore.Persistence;
-using MemoryCore.Services;
+using System.IO.Abstractions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Mnemosyne.Core.Controllers;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Mcp;
+using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Persistence;
+using Mnemosyne.Core.Services;
 using Neo4j.Driver;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Timeout;
+
+namespace Mnemosyne.Core;
 
 public partial class Program
 {
@@ -17,7 +22,20 @@ public partial class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.WriteIndented = true;
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.JsonSerializerOptions.Converters.Clear();
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+            });
+
+        // Register the globally configured JsonSerializerOptions for other services to use
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions);
+
         builder.Services.AddSignalR();
 
         // Configure Neo4j driver
@@ -67,9 +85,21 @@ public partial class Program
         });
 
         // Add repository and services
-        builder.Services.TryAddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
-        builder.Services.TryAddSingleton<IMemorygramService, MemorygramService>();
-        builder.Services.TryAddSingleton<IMemoryQueryService, MemoryQueryService>();
+        builder.Services.AddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
+        builder.Services.AddSingleton<IMemorygramService, MemorygramService>();
+        builder.Services.AddSingleton<IMemoryQueryService, MemoryQueryService>();
+        builder.Services.AddSingleton<IQueryMemoryTool, QueryMemoryTool>();
+
+        // Configure PipelineStorageOptions
+        builder.Services.Configure<PipelineStorageOptions>(
+            builder.Configuration.GetSection(PipelineStorageOptions.SectionName));
+
+        // Register FileSystem
+        builder.Services.TryAddSingleton<IFileSystem, FileSystem>();
+
+        // Register Pipelines Repository and Service
+        builder.Services.AddSingleton<IPipelinesRepository, FilePipelinesRepository>();
+        builder.Services.AddSingleton<IPipelinesService, PipelinesService>();
 
         // Register MCP server
         builder.Services.AddMcpServer()
@@ -79,11 +109,11 @@ public partial class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "MemoryCore API", Version = "v1" });
+            c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Mnemosyne Core API", Version = "v1" });
 
             // Include XML comments for API documentation
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-            var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             c.IncludeXmlComments(xmlPath);
         });
 
@@ -115,7 +145,7 @@ public partial class Program
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "MemoryCore API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mnemosyne Core API V1");
             });
         }
 
@@ -124,6 +154,6 @@ public partial class Program
         app.UseWebSockets();
         app.MapControllers();
         app.MapHub<ChatHub>("/ws/chat");
-        app.Run();
+        await app.RunAsync();
     }
 }

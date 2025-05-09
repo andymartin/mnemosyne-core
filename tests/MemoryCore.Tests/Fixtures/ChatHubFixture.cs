@@ -1,11 +1,10 @@
-using MemoryCore.Tests.Fixtures;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Neo4j.Driver;
 
-namespace MemoryCore.Tests.Fixtures
+namespace Mnemosyne.Core.Tests.Fixtures
 {
     public class ChatHubFixture : WebApplicationFactory<Program>
     {
