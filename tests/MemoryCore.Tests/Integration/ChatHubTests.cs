@@ -1,18 +1,20 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using MemoryCore.Controllers;
+using MemoryCore.Tests.Fixtures;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace MemoryCore.Tests.Integration
 {
-    public class ChatHubTests : IClassFixture<WebApplicationFactory<Program>>
+    [Collection("TestContainerCollection")]
+    public class ChatHubTests : IClassFixture<ChatHubFixture>
     {
-        private readonly WebApplicationFactory<Program> _factory;
+        private readonly ChatHubFixture _factory;
+        private readonly Neo4jContainerFixture _neo4jFixture;
 
-        public ChatHubTests(WebApplicationFactory<Program> factory)
+        public ChatHubTests(ChatHubFixture factory, Neo4jContainerFixture neo4jFixture)
         {
             _factory = factory;
+            _neo4jFixture = neo4jFixture;
         }
 
         [Fact]
@@ -47,7 +49,7 @@ namespace MemoryCore.Tests.Integration
             await hubConnection.StartAsync();
             await hubConnection.InvokeAsync("SendMessage", "testUser", "testMessage");
             
-            await Task.Delay(100); // Small delay for message processing
+            await Task.Delay(100);
             Assert.True(messageReceived);
             await hubConnection.DisposeAsync();
         }
