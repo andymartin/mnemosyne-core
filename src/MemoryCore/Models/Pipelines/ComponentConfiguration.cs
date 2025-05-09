@@ -13,7 +13,7 @@ public class ComponentConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the type or key that identifies the specific <see cref="IPipelineComponent"/> implementation to be used.
+    /// Gets or sets the type or key that identifies the specific <see cref="IPipelineStage"/> implementation to be used.
     /// </summary>
     public string Type { get; set; } = string.Empty;
 

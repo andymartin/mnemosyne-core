@@ -1,6 +1,6 @@
 namespace Mnemosyne.Core.Models.Pipelines
 {
-    public class NullPipelineStage : PipelineComponent
+    public class NullPipelineStage : PipelineStage
     {
         protected override async Task<PipelineExecutionResult> ExecuteInternalAsync(
             PipelineExecutionState state)

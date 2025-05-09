@@ -2,11 +2,11 @@ using Mnemosyne.Core.Interfaces;
 
 namespace Mnemosyne.Core.Models.Pipelines
 {
-    public abstract class PipelineComponent : IPipelineComponent
+    public abstract class PipelineStage : IPipelineStage
     {
         public string Name { get; init; }
 
-        public PipelineComponent()
+        protected PipelineStage()
         {
             Name = GetType().Name;
         }

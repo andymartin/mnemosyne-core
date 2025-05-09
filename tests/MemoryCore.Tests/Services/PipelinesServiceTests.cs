@@ -134,10 +134,10 @@ namespace Mnemosyne.Core.Tests.Services
             var request = new PipelineExecutionRequest { UserInput = "test" };
             _mockRepository.Setup(r => r.GetPipelineAsync(pipelineId)).ReturnsAsync(Result.Ok(manifest));
             
-            // Mock IServiceProvider to return a NullPipelineStage for any IPipelineComponent request
+            // Mock IServiceProvider to return a NullPipelineStage for any IPipelineStage request
             // This part is tricky as GetKeyedService is not standard. Assuming a simple resolve for now.
             var mockComponent = new NullPipelineStage();
-             _mockServiceProvider.Setup(sp => sp.GetService(typeof(IPipelineComponent)))
+             _mockServiceProvider.Setup(sp => sp.GetService(typeof(IPipelineStage)))
                                 .Returns(mockComponent); // Simplified; real DI might need more setup for keyed services
 
 
