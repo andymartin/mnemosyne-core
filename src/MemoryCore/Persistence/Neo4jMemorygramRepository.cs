@@ -25,22 +25,25 @@ namespace Mnemosyne.Core.Persistence
                 {
                     var query = @"
                         MERGE (m:Memorygram {id: $id})
-                        ON CREATE SET 
+                        ON CREATE SET
                             m.content = $content,
                             m.vectorEmbedding = $vectorEmbedding,
+                            m.type = $type,
                             m.createdAt = datetime(),
                             m.updatedAt = datetime()
                         ON MATCH SET
                             m.content = $content,
                             m.vectorEmbedding = $vectorEmbedding,
+                            m.type = $type,
                             m.updatedAt = datetime()
-                        RETURN m.id, m.content, m.vectorEmbedding, m.createdAt, m.updatedAt";
+                        RETURN m.id, m.content, m.vectorEmbedding, m.type, m.createdAt, m.updatedAt";
                     
                     var parameters = new
                     {
                         id = memorygram.Id.ToString(),
                         content = memorygram.Content,
-                        vectorEmbedding = memorygram.VectorEmbedding
+                        vectorEmbedding = memorygram.VectorEmbedding,
+                        type = memorygram.Type.ToString()
                     };
                     
                     var cursor = await tx.RunAsync(query, parameters);
@@ -50,6 +53,7 @@ namespace Mnemosyne.Core.Persistence
                         return Result.Ok(new Memorygram(
                             Guid.Parse(record["m.id"].As<string>()),
                             record["m.content"].As<string>(),
+                            Enum.Parse<MemorygramType>(record["m.type"].As<string>()),
                             ConvertToFloatArray(record["m.vectorEmbedding"]),
                             ConvertToDateTime(record["m.createdAt"]),
                             ConvertToDateTime(record["m.updatedAt"])
@@ -119,7 +123,7 @@ namespace Mnemosyne.Core.Persistence
                         MERGE (a)-[r:ASSOCIATED_WITH]->(b)
                         SET r.weight = $weight
                         RETURN a.id as id, a.content as content, a.vectorEmbedding as vectorEmbedding,
-                               a.createdAt as createdAt, a.updatedAt as updatedAt";
+                               a.type as type, a.createdAt as createdAt, a.updatedAt as updatedAt";
                     
                     var parameters = new
                     {
@@ -135,6 +139,7 @@ namespace Mnemosyne.Core.Persistence
                         return Result.Ok(new Memorygram(
                             Guid.Parse(record["id"].As<string>()),
                             record["content"].As<string>(),
+                            Enum.Parse<MemorygramType>(record["type"].As<string>()),
                             ConvertToFloatArray(record["vectorEmbedding"]),
                             ConvertToDateTime(record["createdAt"]),
                             ConvertToDateTime(record["updatedAt"])
@@ -162,7 +167,7 @@ namespace Mnemosyne.Core.Persistence
                     var query = @"
                         MATCH (m:Memorygram {id: $id})
                         RETURN m.id as id, m.content as content, m.vectorEmbedding as vectorEmbedding,
-                               m.createdAt as createdAt, m.updatedAt as updatedAt";
+                               m.type as type, m.createdAt as createdAt, m.updatedAt as updatedAt";
                     
                     var parameters = new { id = id.ToString() };
                     var cursor = await tx.RunAsync(query, parameters);
@@ -174,6 +179,7 @@ namespace Mnemosyne.Core.Persistence
                         return Result.Ok(new Memorygram(
                             Guid.Parse(record["id"].As<string>()),
                             record["content"].As<string>(),
+                            Enum.Parse<MemorygramType>(record["type"].As<string>()),
                             ConvertToFloatArray(record["vectorEmbedding"]),
                             ConvertToDateTime(record["createdAt"]),
                             ConvertToDateTime(record["updatedAt"])
@@ -214,7 +220,7 @@ namespace Mnemosyne.Core.Persistence
                     var query = @"
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
-                        RETURN node.id AS id, node.content AS content,
+                        RETURN node.id AS id, node.content AS content, node.type AS type,
                                node.createdAt AS createdAt, node.updatedAt AS updatedAt,
                                score
                         ORDER BY score DESC";
@@ -235,6 +241,7 @@ namespace Mnemosyne.Core.Persistence
                         var memorygram = new MemorygramWithScore(
                             Guid.Parse(record["id"].As<string>()),
                             record["content"].As<string>(),
+                            Enum.Parse<MemorygramType>(record["type"].As<string>()),
                             ConvertToDateTime(record["createdAt"]),
                             ConvertToDateTime(record["updatedAt"]),
                             record["score"].As<float>()

@@ -45,6 +45,7 @@ namespace Mnemosyne.Core.Tests.Controllers
                     return Result.Ok(new Memorygram(
                         expectedGuid,
                         arg.Content,
+                        arg.Type,
                         arg.VectorEmbedding,
                         arg.CreatedAt,
                         arg.UpdatedAt
@@ -54,6 +55,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var expectedMemorygram = new Memorygram(
                 expectedGuid,
                 request.Content,
+                request.Type,
                 Array.Empty<float>(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -116,6 +118,7 @@ namespace Mnemosyne.Core.Tests.Controllers
                     return Result.Ok(new Memorygram(
                         expectedGuid,
                         arg.Content,
+                        arg.Type,
                         arg.VectorEmbedding,
                         arg.CreatedAt,
                         arg.UpdatedAt
@@ -162,6 +165,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var expectedMemorygram = new Memorygram(
                 id,
                 "Test content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -234,6 +238,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -242,6 +247,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var updatedMemorygram = new Memorygram(
                 guidId,
                 request.Content,
+                MemorygramType.Chat,
                 existingMemorygram.VectorEmbedding,
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
@@ -328,6 +334,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -374,6 +381,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -408,6 +416,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -416,6 +425,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var patchedMemorygram = new Memorygram(
                 guidId,
                 request.Content,
+                MemorygramType.Chat,
                 existingMemorygram.VectorEmbedding, // Keep original embedding
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
@@ -503,6 +513,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -524,7 +535,6 @@ namespace Mnemosyne.Core.Tests.Controllers
                 JsonSerializer.Serialize(badRequestResult.Value));
             
             errorObj.ShouldNotBeNull();
-            errorObj["Message"].ShouldBe("InvalidRequest");
             errorObj["Message"].ShouldBe("Content must be provided and cannot be empty");
 
             await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
@@ -545,6 +555,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var existingMemorygram = new Memorygram(
                 guidId,
                 "Original content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddDays(-1)
@@ -580,6 +591,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var sourceMemorygram = new Memorygram(
                 sourceId,
                 "Source content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -588,6 +600,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var targetMemorygram = new Memorygram(
                 targetId,
                 "Target content",
+                MemorygramType.Chat,
                 new float[] { 0.4f, 0.5f, 0.6f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -596,6 +609,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var resultMemorygram = new Memorygram(
                 sourceId,
                 "Source content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -717,6 +731,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var sourceMemorygram = new Memorygram(
                 sourceId,
                 "Source content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -757,6 +772,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var sourceMemorygram = new Memorygram(
                 sourceId,
                 "Source content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -765,6 +781,7 @@ namespace Mnemosyne.Core.Tests.Controllers
             var targetMemorygram = new Memorygram(
                 targetId,
                 "Target content",
+                MemorygramType.Chat,
                 new float[] { 0.4f, 0.5f, 0.6f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow

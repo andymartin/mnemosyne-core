@@ -40,6 +40,7 @@ namespace Mnemosyne.Core.Tests.Services
                 new MemorygramWithScore(
                     Guid.NewGuid(),
                     "Test content",
+                    MemorygramType.Chat,
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow,
                     0.95f)
@@ -80,6 +81,7 @@ namespace Mnemosyne.Core.Tests.Services
                 new MemorygramWithScore(
                     Guid.NewGuid(),
                     "Test content",
+                    MemorygramType.Chat,
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow,
                     0.95f)

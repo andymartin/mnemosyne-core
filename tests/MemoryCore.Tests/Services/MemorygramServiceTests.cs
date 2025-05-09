@@ -33,6 +33,7 @@ namespace Mnemosyne.Core.Tests.Services
             var memorygram = new Memorygram(
                 Guid.NewGuid(),
                 "Test content",
+                MemorygramType.Chat,
                 Array.Empty<float>(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow);
@@ -78,6 +79,7 @@ namespace Mnemosyne.Core.Tests.Services
             var memorygram = new Memorygram(
                 Guid.NewGuid(),
                 "Test content",
+                MemorygramType.Chat,
                 Array.Empty<float>(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow);
