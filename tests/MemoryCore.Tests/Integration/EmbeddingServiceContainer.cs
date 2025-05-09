@@ -37,6 +37,8 @@ public class EmbeddingServiceContainer : IAsyncLifetime
                     }
                 };
             })
+            .WithEnvironment("NVIDIA_VISIBLE_DEVICES", "all")
+            .WithEnvironment("NVIDIA_DRIVER_CAPABILITIES", "compute,utility")
             .Build();
     }
 
