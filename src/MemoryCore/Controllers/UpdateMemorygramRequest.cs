@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Mnemosyne.Core.Models;
 
 namespace Mnemosyne.Core.Controllers;
 
@@ -8,6 +9,11 @@ namespace Mnemosyne.Core.Controllers;
 public class UpdateMemorygramRequest
 {
     [Required(ErrorMessage = "Content is required")]
-    [StringLength(10000, ErrorMessage = "Content cannot exceed 10000 characters")]
+    [StringLength(100000, ErrorMessage = "Content cannot exceed 100000 characters")]
     public string Content { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// The type of memorygram
+    /// </summary>
+    public MemorygramType Type { get; set; } = MemorygramType.Chat;
 }

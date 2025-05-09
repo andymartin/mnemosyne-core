@@ -3,11 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Models.Pipelines;
-using Mnemosyne.Core.Tests.Fixtures;
 using Shouldly;
 
 namespace Mnemosyne.Core.Tests.Integration;
 
+[Trait("Category", "Integration")]
 public class PipelinesControllerIntegrationTests
 {
     private readonly CustomWebApplicationFactory _factory;

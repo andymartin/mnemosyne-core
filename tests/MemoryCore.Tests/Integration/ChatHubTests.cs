@@ -3,6 +3,7 @@ using Mnemosyne.Core.Tests.Fixtures;
 
 namespace Mnemosyne.Core.Tests.Integration
 {
+    [Trait("Category", "Integration")]
     [Collection("TestContainerCollection")]
     public class ChatHubTests : IClassFixture<ChatHubFixture>
     {

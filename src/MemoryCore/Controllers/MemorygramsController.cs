@@ -38,6 +38,7 @@ namespace Mnemosyne.Core.Controllers
                 var memorygram = new Memorygram(
                     Guid.NewGuid(),
                     request.Content,
+                    request.Type,
                     Array.Empty<float>(),
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow
@@ -156,6 +157,7 @@ namespace Mnemosyne.Core.Controllers
             var updatedMemorygram = new Memorygram(
                 existingMemorygram.Id,
                 request.Content,
+                request.Type,
                 existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow
@@ -237,6 +239,7 @@ namespace Mnemosyne.Core.Controllers
             var updatedMemorygram = new Memorygram(
                 existingMemorygram.Id,
                 request.Content,
+                request.Type,
                 existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
                 existingMemorygram.CreatedAt,
                 DateTimeOffset.UtcNow

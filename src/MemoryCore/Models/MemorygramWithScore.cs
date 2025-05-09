@@ -6,6 +6,7 @@ namespace Mnemosyne.Core.Models
     public record MemorygramWithScore(
         Guid Id,
         string Content,
+        MemorygramType Type,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
         float Score

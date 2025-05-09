@@ -31,6 +31,7 @@ namespace Mnemosyne.Core.Tests
             mockRecord["m.id"].Returns(testGuid.ToString());
             mockRecord["m.content"].Returns("Test Content");
             mockRecord["m.vectorEmbedding"].Returns(new float[] { 0.1f, 0.2f });
+            mockRecord["m.type"].Returns(MemorygramType.Chat.ToString());
             mockRecord["m.createdAt"].Returns(DateTimeOffset.UtcNow);
             mockRecord["m.updatedAt"].Returns(DateTimeOffset.UtcNow);
             
@@ -61,6 +62,7 @@ namespace Mnemosyne.Core.Tests
             var memorygram = new Memorygram(
                 id,
                 "Test Content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -71,6 +73,7 @@ namespace Mnemosyne.Core.Tests
                 ["m.id"] = memorygram.Id.ToString(),
                 ["m.content"] = memorygram.Content,
                 ["m.vectorEmbedding"] = memorygram.VectorEmbedding,
+                ["m.type"] = memorygram.Type.ToString(),
                 ["m.createdAt"] = memorygram.CreatedAt,
                 ["m.updatedAt"] = memorygram.UpdatedAt,
             };
@@ -84,6 +87,7 @@ namespace Mnemosyne.Core.Tests
             mockRecord["m.id"].Returns(memorygram.Id.ToString());
             mockRecord["m.content"].Returns(memorygram.Content);
             mockRecord["m.vectorEmbedding"].Returns(memorygram.VectorEmbedding);
+            mockRecord["m.type"].Returns(memorygram.Type.ToString());
             mockRecord["m.createdAt"].Returns(memorygram.CreatedAt);
             mockRecord["m.updatedAt"].Returns(memorygram.UpdatedAt);
             mockRecord.Values.Returns(recordValues);
@@ -131,6 +135,7 @@ namespace Mnemosyne.Core.Tests
             var memorygram = new Memorygram(
                 fromId,
                 "Test Content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
@@ -141,6 +146,7 @@ namespace Mnemosyne.Core.Tests
                 ["id"] = memorygram.Id.ToString(),
                 ["content"] = memorygram.Content,
                 ["vectorEmbedding"] = memorygram.VectorEmbedding,
+                ["type"] = memorygram.Type.ToString(),
                 ["createdAt"] = memorygram.CreatedAt,
                 ["updatedAt"] = memorygram.UpdatedAt,
             };
@@ -149,6 +155,7 @@ namespace Mnemosyne.Core.Tests
             mockRecord["id"].Returns(memorygram.Id.ToString());
             mockRecord["content"].Returns(memorygram.Content);
             mockRecord["vectorEmbedding"].Returns(memorygram.VectorEmbedding);
+            mockRecord["type"].Returns(memorygram.Type.ToString());
             mockRecord["createdAt"].Returns(memorygram.CreatedAt);
             mockRecord["updatedAt"].Returns(memorygram.UpdatedAt);
             mockRecord.Values.Returns(recordValues);
@@ -169,6 +176,12 @@ namespace Mnemosyne.Core.Tests
                     var func = callInfo.ArgAt<Func<IAsyncQueryRunner, Task<Result<Memorygram>>>>(0);
                     return func(_queryRunner);
                 });
+                
+            // Need to also set up the ExecuteReadAsync calls used for existence checks
+            _session.ExecuteReadAsync(
+                Arg.Any<Func<IAsyncQueryRunner, Task<bool>>>(),
+                Arg.Any<Action<TransactionConfigBuilder>>())
+                .Returns(true);
 
             // Act
             var result = await _repository.CreateAssociationAsync(fromId, toId, weight);
@@ -200,6 +213,7 @@ namespace Mnemosyne.Core.Tests
                 ["id"] = id.ToString(),
                 ["content"] = "Test Content",
                 ["vectorEmbedding"] = new float[] { 0.1f, 0.2f },
+                ["type"] = MemorygramType.Chat.ToString(),
                 ["createdAt"] = DateTimeOffset.UtcNow,
                 ["updatedAt"] = DateTimeOffset.UtcNow
             };
@@ -207,6 +221,7 @@ namespace Mnemosyne.Core.Tests
             mockRecord["id"].Returns(id.ToString());
             mockRecord["content"].Returns("Test Content");
             mockRecord["vectorEmbedding"].Returns(new float[] { 0.1f, 0.2f });
+            mockRecord["type"].Returns(MemorygramType.Chat.ToString());
             mockRecord["createdAt"].Returns(DateTimeOffset.UtcNow);
             mockRecord["updatedAt"].Returns(DateTimeOffset.UtcNow);
             mockRecord.Values.Returns(recordValues);
@@ -297,6 +312,7 @@ namespace Mnemosyne.Core.Tests
             var memorygram = new Memorygram(
                 testGuid,
                 "Test Content",
+                MemorygramType.Chat,
                 new float[] { 0.1f, 0.2f },
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
