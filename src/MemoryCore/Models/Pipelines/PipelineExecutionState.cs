@@ -7,6 +7,5 @@ namespace Mnemosyne.Core.Models.Pipelines
         public PipelineExecutionRequest Request { get; set; } = new();
         public List<PipelineStageHistory> History { get; set; } = new();
         public List<ContextChunk> Context { get; set; } = new();
-        public object? CurrentResult { get; set; }
     }
 }
