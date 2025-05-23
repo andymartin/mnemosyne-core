@@ -6,7 +6,7 @@ using Mnemosyne.Core.Services;
 using Moq;
 using Shouldly;
 
-namespace Mnemosyne.Core.Tests.Services
+namespace MemoryCore.Tests.UnitTests.Services
 {
     public class PipelinesServiceTests
     {

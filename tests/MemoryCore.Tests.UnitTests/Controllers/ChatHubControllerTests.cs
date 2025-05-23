@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Mnemosyne.Core.Controllers;
 using Moq;
 
-namespace Mnemosyne.Core.Tests.Controllers
+namespace MemoryCore.Tests.UnitTests.Controllers
 {
     public class ChatHubControllerTests
     {

@@ -7,7 +7,7 @@ using Mnemosyne.Core.Persistence;
 using Moq;
 using Shouldly;
 
-namespace Mnemosyne.Core.Tests.Persistence
+namespace MemoryCore.Tests.UnitTests.Persistence
 {
     public class FilePipelinesRepositoryTests
     {

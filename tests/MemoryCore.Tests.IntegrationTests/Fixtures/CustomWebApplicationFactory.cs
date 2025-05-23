@@ -12,13 +12,13 @@ using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Mcp;
 using Mnemosyne.Core.Persistence;
 using Mnemosyne.Core.Services;
-using Mnemosyne.Core.Tests.Fixtures;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Neo4j.Driver;
 using NSubstitute;
 
-namespace Mnemosyne.Core.Tests.Integration
+namespace MemoryCore.Tests.IntegrationTests.Fixtures
 {
-    public class CustomWebApplicationFactory : WebApplicationFactory<Program>
+    public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.Program>
     {
         private readonly Dictionary<string, string> _configValues = new Dictionary<string, string>();
         private readonly Neo4jContainerFixture? _neo4jFixture;

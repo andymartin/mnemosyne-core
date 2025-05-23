@@ -7,7 +7,7 @@ using Moq;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace Mnemosyne.Core.Tests.Mcp
+namespace MemoryCore.Tests.UnitTests.Mcp
 {
     public class QueryMemoryToolTests
     {

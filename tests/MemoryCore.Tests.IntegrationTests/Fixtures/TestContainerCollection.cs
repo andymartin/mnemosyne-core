@@ -1,4 +1,4 @@
-namespace Mnemosyne.Core.Tests.Fixtures
+namespace MemoryCore.Tests.IntegrationTests.Fixtures
 {
     [CollectionDefinition("TestContainerCollection")]
     public class TestContainerCollection : 

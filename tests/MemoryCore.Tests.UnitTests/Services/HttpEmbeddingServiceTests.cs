@@ -5,7 +5,7 @@ using Mnemosyne.Core.Services;
 using Moq;
 using Moq.Protected;
 
-namespace Mnemosyne.Core.Tests.Services
+namespace MemoryCore.Tests.UnitTests.Services
 {
     public class HttpEmbeddingServiceTests
     {
