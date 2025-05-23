@@ -10,7 +10,7 @@ using NSubstitute;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace Mnemosyne.Core.Tests.Controllers
+namespace MemoryCore.Tests.UnitTests.Controllers
 {
     public class MemorygramsControllerTests
     {

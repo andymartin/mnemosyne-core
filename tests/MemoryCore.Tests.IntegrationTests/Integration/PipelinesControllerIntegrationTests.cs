@@ -4,8 +4,9 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Models.Pipelines;
 using Shouldly;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 
-namespace Mnemosyne.Core.Tests.Integration;
+namespace MemoryCore.Tests.IntegrationTests.Integration;
 
 [Trait("Category", "Integration")]
 public class PipelinesControllerIntegrationTests

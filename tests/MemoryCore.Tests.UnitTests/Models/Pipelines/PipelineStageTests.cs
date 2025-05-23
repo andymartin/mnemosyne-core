@@ -1,7 +1,7 @@
 using Mnemosyne.Core.Models.Pipelines;
 using Shouldly;
 
-namespace Mnemosyne.Core.Tests.Models.Pipelines;
+namespace MemoryCore.Tests.UnitTests.Models.Pipelines;
 
 public class PipelineStageTests
 {

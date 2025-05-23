@@ -5,7 +5,7 @@ using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Services;
 using Moq;
 
-namespace Mnemosyne.Core.Tests.Services
+namespace MemoryCore.Tests.UnitTests.Services
 {
     public class MemorygramServiceTests
     {

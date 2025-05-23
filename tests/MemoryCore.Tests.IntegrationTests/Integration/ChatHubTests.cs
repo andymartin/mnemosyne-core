@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using Mnemosyne.Core.Tests.Fixtures;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 
-namespace Mnemosyne.Core.Tests.Integration
+namespace MemoryCore.Tests.IntegrationTests.Integration
 {
     [Trait("Category", "Integration")]
     [Collection("TestContainerCollection")]

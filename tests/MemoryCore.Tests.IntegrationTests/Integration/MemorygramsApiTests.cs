@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Controllers;
 using Mnemosyne.Core.Models;
-using Mnemosyne.Core.Tests.Fixtures;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Shouldly;
 using Xunit.Abstractions;
 

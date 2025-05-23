@@ -4,9 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Neo4j.Driver;
 
-namespace Mnemosyne.Core.Tests.Fixtures
+namespace MemoryCore.Tests.IntegrationTests.Fixtures
 {
-    public class ChatHubFixture : WebApplicationFactory<Program>
+    public class ChatHubFixture : WebApplicationFactory<Mnemosyne.Core.Program>
     {
         private readonly Neo4jContainerFixture _neo4jFixture;
 
