@@ -42,7 +42,7 @@ public class EmbeddingServiceContainer : IAsyncLifetime
             .Build();
     }
 
-    public string GetConnectionString() 
+    public string GetConnectionString()
     {
         if (_mappedPort == 0)
         {

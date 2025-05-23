@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using FluentResults;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models.Pipelines;
@@ -9,16 +8,12 @@ public class PipelinesService : IPipelinesService
 {
     private readonly IPipelinesRepository _repository;
     private readonly ILogger<PipelinesService> _logger;
-    private readonly ConcurrentDictionary<Guid, PipelineExecutionStatus> _activeExecutions = new();
-    private readonly IServiceProvider _serviceProvider;
 
     public PipelinesService(
         IPipelinesRepository repository,
-        IServiceProvider serviceProvider,
         ILogger<PipelinesService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -93,136 +88,5 @@ public class PipelinesService : IPipelinesService
             _logger.LogInformation("Successfully deleted pipeline {PipelineId}", pipelineId);
         }
         return deleteResult;
-    }
-
-    public async Task<Result<PipelineExecutionStatus>> ExecutePipelineAsync(
-        Guid pipelineId,
-        PipelineExecutionRequest request)
-    {
-        _logger.LogInformation("Attempting to execute pipeline ID: {PipelineId} with RunId (to be generated)", pipelineId);
-
-        var manifestResult = await GetPipelineAsync(pipelineId);
-        if (manifestResult.IsFailed)
-        {
-            _logger.LogWarning("Execution failed: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", pipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
-            return Result.Fail<PipelineExecutionStatus>(manifestResult.Errors);
-        }
-        var manifest = manifestResult.Value;
-        var runId = Guid.NewGuid();
-
-        var status = new PipelineExecutionStatus
-        {
-            RunId = runId,
-            PipelineId = pipelineId,
-            Status = PipelineStatus.Pending,
-            OverallStartTime = DateTime.UtcNow,
-            CurrentStageName = "Initializing",
-            CurrentStageStartTime = DateTime.UtcNow
-        };
-
-        if (!_activeExecutions.TryAdd(runId, status))
-        {
-            _logger.LogError("Failed to add pipeline execution {RunId} to active executions: Key already exists.", runId);
-            return Result.Fail<PipelineExecutionStatus>("Failed to initialize pipeline execution: Duplicate Run ID.");
-        }
-        _logger.LogInformation("Pipeline ID: {PipelineId} execution initiated with RunId: {RunId}", pipelineId, runId);
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                _logger.LogInformation("Starting simulated execution for RunId: {RunId}", runId);
-                await SimulatePipelineExecution(runId, manifest, request);
-                _logger.LogInformation("Finished simulated execution for RunId: {RunId}", runId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unhandled exception during pipeline execution for RunId: {RunId}", runId);
-                if (_activeExecutions.TryGetValue(runId, out var errorStatus))
-                {
-                    errorStatus.Status = PipelineStatus.Failed;
-                    errorStatus.Message = ex.ToString();
-                    errorStatus.EndTime = DateTime.UtcNow;
-                }
-            }
-        });
-
-        return Result.Ok(status);
-    }
-
-    public Result<PipelineExecutionStatus> GetExecutionStatus(Guid runId)
-    {
-        _logger.LogDebug("Attempting to get execution status for RunId: {RunId}", runId);
-        if (_activeExecutions.TryGetValue(runId, out var status))
-        {
-            return Result.Ok(status);
-        }
-        _logger.LogWarning("Execution status not found for RunId: {RunId}", runId);
-        return Result.Fail<PipelineExecutionStatus>($"Execution status not found for Run ID: {runId}");
-    }
-
-    private async Task SimulatePipelineExecution(Guid runId, PipelineManifest manifest, PipelineExecutionRequest initialRequest)
-    {
-        if (!_activeExecutions.TryGetValue(runId, out var status))
-        {
-            _logger.LogError("SimulatePipelineExecution: Could not find active execution for RunId {RunId}. Aborting simulation.", runId);
-            return;
-        }
-
-        var executionState = new PipelineExecutionState
-        {
-            RunId = runId,
-            PipelineId = manifest.Id,
-            Request = initialRequest,
-        };
-
-        try
-        {
-            status.Status = PipelineStatus.Running;
-            status.CurrentStageName = "StartingExecution";
-            status.CurrentStageStartTime = DateTime.UtcNow;
-            _logger.LogInformation("RunId {RunId}: Status changed to Running.", runId);
-
-            if (manifest.Components == null || !manifest.Components.Any())
-            {
-                _logger.LogWarning("RunId {RunId}: Pipeline manifest {PipelineId} has no components defined. Marking as completed.", runId, manifest.Id);
-                status.Status = PipelineStatus.Completed;
-                status.Message = "Pipeline completed: No components to execute.";
-                status.EndTime = DateTime.UtcNow;
-                return;
-            }
-
-            foreach (var componentConfig in manifest.Components)
-            {
-                status.Status = PipelineStatus.Processing;
-                status.CurrentStageName = componentConfig.Name ?? "Unnamed Stage";
-                status.CurrentStageStartTime = DateTime.UtcNow;
-                _logger.LogInformation("RunId {RunId}: Entering stage: {StageName}", runId, status.CurrentStageName);
-
-                // In a real scenario, resolve and execute IPipelineStage here
-                // var component = _serviceProvider.GetKeyedService<IPipelineStage>(componentConfig.Type);
-                // if (component != null) {
-                //    executionState = await component.ExecuteAsync(executionState, status);
-                // } else { throw new InvalidOperationException($"Component type '{componentConfig.Type}' not registered."); }
-
-                await Task.Delay(TimeSpan.FromMilliseconds(200 + Random.Shared.Next(0, 300))); // Simulate work with slight variance
-
-                _logger.LogInformation("RunId {RunId}: Finished stage: {StageName}", runId, status.CurrentStageName);
-            }
-
-            status.Status = PipelineStatus.Completed;
-            status.CurrentStageName = "Finished";
-            status.EndTime = DateTime.UtcNow;
-            status.Message = "Simulated pipeline execution completed successfully.";
-            _logger.LogInformation("RunId {RunId}: Pipeline execution completed successfully.", runId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "RunId {RunId}: Exception during simulated pipeline execution.", runId);
-            status.Status = PipelineStatus.Failed;
-            status.Message = ex.ToString();
-            status.EndTime = DateTime.UtcNow;
-            // No rethrow, allow the background task to complete.
-        }
     }
 }

@@ -14,15 +14,15 @@ public class PipelineStageTests
         {
             InternalExecuteCalled = true;
             ReceivedState = state;
-            
+
             // Add test information to context
             state.Context.Add(new ContextChunk
             {
                 Type = "Test",
                 Provenance = "TestPipelineStage",
-                Data = "Test component executed"
+                Content = "Test component executed"
             });
-            
+
             return Task.FromResult(state);
         }
     }
@@ -73,7 +73,7 @@ public class PipelineStageTests
         result.Context.ShouldNotBeEmpty();
         result.Context.Last().Type.ShouldBe("Test");
         result.Context.Last().Provenance.ShouldBe("TestPipelineStage");
-        result.Context.Last().Data.ShouldBe("Test component executed");
+        result.Context.Last().Content.ShouldBe("Test component executed");
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class PipelineStageTests
         result.Context.ShouldNotBeEmpty();
         result.Context.Last().Type.ShouldBe("Simulation");
         result.Context.Last().Provenance.ShouldBe("NullPipelineStage");
-        result.Context.Last().Data.ShouldBe("Simulated stage completed");
+        result.Context.Last().Content.ShouldBe("Simulated stage completed");
         status.CurrentStageName.ShouldBe(nameof(NullPipelineStage));
     }
 }

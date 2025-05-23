@@ -2,74 +2,73 @@ using FluentResults;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
 
-namespace Mnemosyne.Core.Services
+namespace Mnemosyne.Core.Services;
+
+public class MemorygramService : IMemorygramService
 {
-    public class MemorygramService : IMemorygramService
+    private readonly IMemorygramRepository _repository;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly ILogger<MemorygramService> _logger;
+
+    public MemorygramService(
+        IMemorygramRepository repository,
+        IEmbeddingService embeddingService,
+        ILogger<MemorygramService> logger)
     {
-        private readonly IMemorygramRepository _repository;
-        private readonly IEmbeddingService _embeddingService;
-        private readonly ILogger<MemorygramService> _logger;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
-        public MemorygramService(
-            IMemorygramRepository repository,
-            IEmbeddingService embeddingService,
-            ILogger<MemorygramService> logger)
+    public async Task<Result<Memorygram>> CreateOrUpdateMemorygramAsync(Memorygram memorygram)
+    {
+        try
         {
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            // Generate embedding for the memorygram content
+            var embeddingResult = await _embeddingService.GetEmbeddingAsync(memorygram.Content);
+
+            if (embeddingResult.IsFailed)
+            {
+                _logger.LogError("Failed to generate embedding: {Errors}", string.Join(", ", embeddingResult.Errors));
+                return Result.Fail<Memorygram>(embeddingResult.Errors);
+            }
+
+            // Create a new memorygram with the embedding
+            var memorgramWithEmbedding = memorygram with { VectorEmbedding = embeddingResult.Value };
+
+            // Store the memorygram with its embedding
+            return await _repository.CreateOrUpdateMemorygramAsync(memorgramWithEmbedding);
         }
-
-        public async Task<Result<Memorygram>> CreateOrUpdateMemorygramAsync(Memorygram memorygram)
+        catch (Exception ex)
         {
-            try
-            {
-                // Generate embedding for the memorygram content
-                var embeddingResult = await _embeddingService.GetEmbeddingAsync(memorygram.Content);
-                
-                if (embeddingResult.IsFailed)
-                {
-                    _logger.LogError("Failed to generate embedding: {Errors}", string.Join(", ", embeddingResult.Errors));
-                    return Result.Fail<Memorygram>(embeddingResult.Errors);
-                }
-                
-                // Create a new memorygram with the embedding
-                var memorgramWithEmbedding = memorygram with { VectorEmbedding = embeddingResult.Value };
-                
-                // Store the memorygram with its embedding
-                return await _repository.CreateOrUpdateMemorygramAsync(memorgramWithEmbedding);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Message creating or updating memorygram");
-                return Result.Fail<Memorygram>($"Service error: {ex.Message}");
-            }
+            _logger.LogError(ex, "Message creating or updating memorygram");
+            return Result.Fail<Memorygram>($"Service error: {ex.Message}");
         }
+    }
 
-        public async Task<Result<Memorygram>> CreateAssociationAsync(Guid fromId, Guid toId, float weight)
+    public async Task<Result<Memorygram>> CreateAssociationAsync(Guid fromId, Guid toId, float weight)
+    {
+        try
         {
-            try
-            {
-                return await _repository.CreateAssociationAsync(fromId, toId, weight);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Message creating association between {FromId} and {ToId}", fromId, toId);
-                return Result.Fail($"Service error: {ex.Message}");
-            }
+            return await _repository.CreateAssociationAsync(fromId, toId, weight);
         }
-
-        public async Task<Result<Memorygram>> GetMemorygramByIdAsync(Guid id)
+        catch (Exception ex)
         {
-            try
-            {
-                return await _repository.GetMemorygramByIdAsync(id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Message retrieving memorygram by ID {Id}", id);
-                return Result.Fail<Memorygram>($"Service error: {ex.Message}");
-            }
+            _logger.LogError(ex, "Message creating association between {FromId} and {ToId}", fromId, toId);
+            return Result.Fail($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<Memorygram>> GetMemorygramByIdAsync(Guid id)
+    {
+        try
+        {
+            return await _repository.GetMemorygramByIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Message retrieving memorygram by ID {Id}", id);
+            return Result.Fail<Memorygram>($"Service error: {ex.Message}");
         }
     }
 }

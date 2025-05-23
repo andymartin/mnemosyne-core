@@ -1,8 +1,7 @@
-namespace Mnemosyne.Core.Models
+namespace Mnemosyne.Core.Models;
+
+public enum MemorygramType
 {
-    public enum MemorygramType
-    {
-        Invalid,
-        Chat
-    }
+    Invalid,
+    Chat
 }

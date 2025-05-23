@@ -5,125 +5,124 @@ using Mnemosyne.Core.Services;
 using Moq;
 using Moq.Protected;
 
-namespace MemoryCore.Tests.UnitTests.Services
+namespace MemoryCore.Tests.UnitTests.Services;
+
+public class HttpEmbeddingServiceTests
 {
-    public class HttpEmbeddingServiceTests
+    private readonly Mock<ILogger<HttpEmbeddingService>> _loggerMock;
+    private readonly Mock<HttpMessageHandler> _handlerMock;
+    private readonly HttpClient _httpClient;
+    private readonly HttpEmbeddingService _service;
+
+    public HttpEmbeddingServiceTests()
     {
-        private readonly Mock<ILogger<HttpEmbeddingService>> _loggerMock;
-        private readonly Mock<HttpMessageHandler> _handlerMock;
-        private readonly HttpClient _httpClient;
-        private readonly HttpEmbeddingService _service;
-
-        public HttpEmbeddingServiceTests()
+        _loggerMock = new Mock<ILogger<HttpEmbeddingService>>();
+        _handlerMock = new Mock<HttpMessageHandler>();
+        _httpClient = new HttpClient(_handlerMock.Object)
         {
-            _loggerMock = new Mock<ILogger<HttpEmbeddingService>>();
-            _handlerMock = new Mock<HttpMessageHandler>();
-            _httpClient = new HttpClient(_handlerMock.Object)
+            BaseAddress = new Uri("http://test-embedding-service.com")
+        };
+        _service = new HttpEmbeddingService(_httpClient, _loggerMock.Object);
+    }
+
+    [Fact]
+    public async Task GetEmbeddingAsync_ReturnsEmbedding_WhenServiceRespondsSuccessfully()
+    {
+        // Arrange
+        var expectedEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
+        var responseContent = JsonSerializer.Serialize(new { embedding = expectedEmbedding });
+
+        _handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
             {
-                BaseAddress = new Uri("http://test-embedding-service.com")
-            };
-            _service = new HttpEmbeddingService(_httpClient, _loggerMock.Object);
-        }
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseContent)
+            });
 
-        [Fact]
-        public async Task GetEmbeddingAsync_ReturnsEmbedding_WhenServiceRespondsSuccessfully()
-        {
-            // Arrange
-            var expectedEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
-            var responseContent = JsonSerializer.Serialize(new { embedding = expectedEmbedding });
+        // Act
+        var result = await _service.GetEmbeddingAsync("Test content");
 
-            _handlerMock
-                .Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>()
-                )
-                .ReturnsAsync(new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent(responseContent)
-                });
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedEmbedding, result.Value);
+    }
 
-            // Act
-            var result = await _service.GetEmbeddingAsync("Test content");
+    [Fact]
+    public async Task GetEmbeddingAsync_ReturnsFailure_WhenServiceReturnsNonSuccessStatusCode()
+    {
+        // Arrange
+        _handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError,
+                Content = new StringContent("Service error")
+            });
 
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Equal(expectedEmbedding, result.Value);
-        }
+        // Act
+        var result = await _service.GetEmbeddingAsync("Test content");
 
-        [Fact]
-        public async Task GetEmbeddingAsync_ReturnsFailure_WhenServiceReturnsNonSuccessStatusCode()
-        {
-            // Arrange
-            _handlerMock
-                .Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>()
-                )
-                .ReturnsAsync(new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.InternalServerError,
-                    Content = new StringContent("Service error")
-                });
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Embedding service error: 500", result.Errors[0].Message);
+    }
 
-            // Act
-            var result = await _service.GetEmbeddingAsync("Test content");
+    [Fact]
+    public async Task GetEmbeddingAsync_ReturnsFailure_WhenServiceReturnsEmptyEmbedding()
+    {
+        // Arrange
+        var responseContent = JsonSerializer.Serialize(new { embedding = Array.Empty<float>() });
 
-            // Assert
-            Assert.True(result.IsFailed);
-            Assert.Contains("Embedding service error: 500", result.Errors[0].Message);
-        }
+        _handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseContent)
+            });
 
-        [Fact]
-        public async Task GetEmbeddingAsync_ReturnsFailure_WhenServiceReturnsEmptyEmbedding()
-        {
-            // Arrange
-            var responseContent = JsonSerializer.Serialize(new { embedding = Array.Empty<float>() });
+        // Act
+        var result = await _service.GetEmbeddingAsync("Test content");
 
-            _handlerMock
-                .Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>()
-                )
-                .ReturnsAsync(new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent(responseContent)
-                });
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("empty or null embedding", result.Errors[0].Message);
+    }
 
-            // Act
-            var result = await _service.GetEmbeddingAsync("Test content");
+    [Fact]
+    public async Task GetEmbeddingAsync_ReturnsFailure_WhenHttpRequestFails()
+    {
+        // Arrange
+        _handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ThrowsAsync(new HttpRequestException("Connection failed"));
 
-            // Assert
-            Assert.True(result.IsFailed);
-            Assert.Contains("empty or null embedding", result.Errors[0].Message);
-        }
+        // Act
+        var result = await _service.GetEmbeddingAsync("Test content");
 
-        [Fact]
-        public async Task GetEmbeddingAsync_ReturnsFailure_WhenHttpRequestFails()
-        {
-            // Arrange
-            _handlerMock
-                .Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>()
-                )
-                .ThrowsAsync(new HttpRequestException("Connection failed"));
-
-            // Act
-            var result = await _service.GetEmbeddingAsync("Test content");
-
-            // Assert
-            Assert.True(result.IsFailed);
-            Assert.Contains("Failed to connect to embedding service", result.Errors[0].Message);
-        }
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Failed to connect to embedding service", result.Errors[0].Message);
     }
 }
