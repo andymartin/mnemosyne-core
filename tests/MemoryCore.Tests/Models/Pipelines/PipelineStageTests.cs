@@ -10,15 +10,20 @@ public class PipelineStageTests
         public bool InternalExecuteCalled { get; private set; }
         public PipelineExecutionState? ReceivedState { get; private set; }
 
-        protected override Task<PipelineExecutionResult> ExecuteInternalAsync(PipelineExecutionState state)
+        protected override Task<PipelineExecutionState> ExecuteInternalAsync(PipelineExecutionState state)
         {
             InternalExecuteCalled = true;
             ReceivedState = state;
-            return Task.FromResult(new PipelineExecutionResult
+            
+            // Add test information to context
+            state.Context.Add(new ContextChunk
             {
-                ResponseMessage = "Test component executed",
-                UpdatedMetadata = new Dictionary<string, object>()
+                Type = "Test",
+                Provenance = "TestPipelineStage",
+                Data = "Test component executed"
             });
+            
+            return Task.FromResult(state);
         }
     }
 
@@ -64,8 +69,11 @@ public class PipelineStageTests
         component.ReceivedState.ShouldNotBeNull();
         component.ReceivedState.ShouldBeSameAs(state);
         result.ShouldNotBeNull();
-        result.ResponseMessage.ShouldBe("Test component executed");
-        (result.UpdatedMetadata as Dictionary<string, object>).ShouldNotBeNull();
+        result.ShouldBeSameAs(state);
+        result.Context.ShouldNotBeEmpty();
+        result.Context.Last().Type.ShouldBe("Test");
+        result.Context.Last().Provenance.ShouldBe("TestPipelineStage");
+        result.Context.Last().Data.ShouldBe("Test component executed");
     }
 
     [Fact]
@@ -79,7 +87,7 @@ public class PipelineStageTests
     }
 
     [Fact]
-    public async Task NullPipelineStage_ExecuteInternalAsync_ReturnsExpectedResultAfterDelay()
+    public async Task NullPipelineStage_ExecuteInternalAsync_UpdatesStateAfterDelay()
     {
         // Arrange
         var nullStage = new NullPipelineStage();
@@ -105,9 +113,11 @@ public class PipelineStageTests
 
         // Assert
         result.ShouldNotBeNull();
-        result.ResponseMessage.ShouldBe("Simulated stage completed");
-        (result.UpdatedMetadata as Dictionary<string, object>).ShouldNotBeNull();
-        (result.UpdatedMetadata as Dictionary<string, object>).ShouldBeEmpty();
+        result.ShouldBeSameAs(state);
+        result.Context.ShouldNotBeEmpty();
+        result.Context.Last().Type.ShouldBe("Simulation");
+        result.Context.Last().Provenance.ShouldBe("NullPipelineStage");
+        result.Context.Last().Data.ShouldBe("Simulated stage completed");
         status.CurrentStageName.ShouldBe(nameof(NullPipelineStage));
     }
 }

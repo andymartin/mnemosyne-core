@@ -187,23 +187,22 @@ public class PipelinesService : IPipelinesService
             {
                 _logger.LogWarning("RunId {RunId}: Pipeline manifest {PipelineId} has no components defined. Marking as completed.", runId, manifest.Id);
                 status.Status = PipelineStatus.Completed;
-                status.Result = new PipelineExecutionResult { ResponseMessage = "Pipeline completed: No components to execute." };
+                status.Message = "Pipeline completed: No components to execute.";
                 status.EndTime = DateTime.UtcNow;
                 return;
             }
 
             foreach (var componentConfig in manifest.Components)
             {
-                status.Status = PipelineStatus.Processing; // Changed from Running to Processing for a stage
+                status.Status = PipelineStatus.Processing;
                 status.CurrentStageName = componentConfig.Name ?? "Unnamed Stage";
-                status.CurrentStageStartTime = DateTime.UtcNow; // Consider DateTimeOffset.UtcNow
+                status.CurrentStageStartTime = DateTime.UtcNow;
                 _logger.LogInformation("RunId {RunId}: Entering stage: {StageName}", runId, status.CurrentStageName);
 
                 // In a real scenario, resolve and execute IPipelineStage here
                 // var component = _serviceProvider.GetKeyedService<IPipelineStage>(componentConfig.Type);
-                // if (component != null) { 
-                //    var stageResult = await component.ExecuteAsync(executionState, status); 
-                //    executionState.CurrentResult = stageResult; // Or handle result appropriately
+                // if (component != null) {
+                //    executionState = await component.ExecuteAsync(executionState, status);
                 // } else { throw new InvalidOperationException($"Component type '{componentConfig.Type}' not registered."); }
 
                 await Task.Delay(TimeSpan.FromMilliseconds(200 + Random.Shared.Next(0, 300))); // Simulate work with slight variance
@@ -213,12 +212,8 @@ public class PipelinesService : IPipelinesService
 
             status.Status = PipelineStatus.Completed;
             status.CurrentStageName = "Finished";
-            status.EndTime = DateTime.UtcNow; // Consider DateTimeOffset.UtcNow
-            status.Result = new PipelineExecutionResult
-            {
-                ResponseMessage = "Simulated pipeline execution completed successfully.",
-                UpdatedMetadata = new Dictionary<string, object> { { "simulated", true } }
-            };
+            status.EndTime = DateTime.UtcNow;
+            status.Message = "Simulated pipeline execution completed successfully.";
             _logger.LogInformation("RunId {RunId}: Pipeline execution completed successfully.", runId);
         }
         catch (Exception ex)
@@ -226,7 +221,7 @@ public class PipelinesService : IPipelinesService
             _logger.LogError(ex, "RunId {RunId}: Exception during simulated pipeline execution.", runId);
             status.Status = PipelineStatus.Failed;
             status.Message = ex.ToString();
-            status.EndTime = DateTime.UtcNow; // Consider DateTimeOffset.UtcNow
+            status.EndTime = DateTime.UtcNow;
             // No rethrow, allow the background task to complete.
         }
     }

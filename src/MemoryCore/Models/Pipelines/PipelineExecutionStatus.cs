@@ -44,13 +44,8 @@ namespace Mnemosyne.Core.Models.Pipelines
         public DateTimeOffset? EndTime { get; set; }
 
         /// <summary>
-        /// Gets or sets the result of the pipeline execution, if completed successfully.
-        /// </summary>
-        public PipelineExecutionResult? Result { get; set; }
-
-        /// <summary>
-        /// Gets or sets error information if the pipeline execution failed.
-        /// This could be a simple string, an exception object, or a custom error DTO.
+        /// Gets or sets the message or result information for the pipeline execution.
+        /// Contains success message if completed successfully or error information if failed.
         /// </summary>
         public string? Message { get; set; }
     }

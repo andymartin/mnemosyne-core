@@ -6,7 +6,7 @@ namespace Mnemosyne.Core.Interfaces
     {
         string Name { get; }
         
-        Task<PipelineExecutionResult> ExecuteAsync(
+        Task<PipelineExecutionState> ExecuteAsync(
             PipelineExecutionState state,
             PipelineExecutionStatus status);
     }

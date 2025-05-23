@@ -182,8 +182,8 @@ namespace Mnemosyne.Core.Tests.Services
 
             finalStatusResult.IsSuccess.ShouldBeTrue();
             finalStatusResult.Value.Status.ShouldBe(PipelineStatus.Completed);
-            finalStatusResult.Value.Result.ShouldNotBeNull();
-            (finalStatusResult.Value.Result as PipelineExecutionResult)?.ResponseMessage.ShouldBe("Pipeline completed: No components to execute.");
+            finalStatusResult.Value.Message.ShouldNotBeNull();
+            finalStatusResult.Value.Message.ShouldBe("Pipeline completed: No components to execute.");
         }
 
 
