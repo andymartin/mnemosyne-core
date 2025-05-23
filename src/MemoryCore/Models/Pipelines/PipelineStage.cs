@@ -11,19 +11,19 @@ namespace Mnemosyne.Core.Models.Pipelines
             Name = GetType().Name;
         }
 
-        public async Task<PipelineExecutionResult> ExecuteAsync(
+        public async Task<PipelineExecutionState> ExecuteAsync(
             PipelineExecutionState state,
             PipelineExecutionStatus status)
         {
             status.CurrentStageName = Name;
             status.CurrentStageStartTime = DateTimeOffset.UtcNow.DateTime;
 
-            var result = await ExecuteInternalAsync(state);
+            state = await ExecuteInternalAsync(state);
 
-            return result;
+            return state;
         }
 
-        protected abstract Task<PipelineExecutionResult> ExecuteInternalAsync(
+        protected abstract Task<PipelineExecutionState> ExecuteInternalAsync(
             PipelineExecutionState state);
     }
 }

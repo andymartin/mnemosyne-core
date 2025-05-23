@@ -364,6 +364,6 @@ public class PipelinesControllerIntegrationTests
         finalStatus.ShouldNotBeNull();
         finalStatus.Status.ShouldBe(PipelineStatus.Completed);
         finalStatus.EndTime.ShouldNotBeNull();
-        finalStatus.Result.ShouldNotBeNull();
+        finalStatus.Message.ShouldNotBeNull();
     }
 }
