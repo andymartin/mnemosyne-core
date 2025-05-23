@@ -1,9 +1,8 @@
 using FluentResults;
 
-namespace Mnemosyne.Core.Interfaces
+namespace Mnemosyne.Core.Interfaces;
+
+public interface IEmbeddingService
 {
-    public interface IEmbeddingService
-    {
-        Task<Result<float[]>> GetEmbeddingAsync(string text);
-    }
+    Task<Result<float[]>> GetEmbeddingAsync(string text);
 }

@@ -1,7 +1,7 @@
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
-using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -28,17 +28,17 @@ public class QueryMemoryIntegrationTests : IDisposable
         _output = output;
         _neo4jFixture = neo4jFixture;
         _embeddingFixture = embeddingFixture;
-            
+
         // Create a factory that uses the fixtures
         _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
         _client = _factory.CreateClient();
-            
+
         // Create a scope to resolve scoped services
         _scope = _factory.Services.CreateScope();
         _scopedServiceProvider = _scope.ServiceProvider;
         _memoryQueryService = _scopedServiceProvider.GetRequiredService<IMemoryQueryService>();
     }
-        
+
     public void Dispose()
     {
         _scope?.Dispose();
@@ -137,23 +137,23 @@ public class QueryMemoryIntegrationTests : IDisposable
 
         // Get the embedding service to verify the embedding generation
         var embeddingService = _scopedServiceProvider.GetRequiredService<IEmbeddingService>();
-            
+
         // Act - Get the embedding directly from the service
         var embeddingResult = await embeddingService.GetEmbeddingAsync(queryText);
-            
+
         // Assert - Verify the embedding service returns a valid embedding
         embeddingResult.IsSuccess.ShouldBeTrue();
         var queryVector = embeddingResult.Value;
         queryVector.ShouldNotBeNull();
         queryVector.Length.ShouldBeGreaterThan(0);
-            
+
         // Now test the full query flow
         var result = await _memoryQueryService.QueryAsync(input);
-            
+
         // Verify the query was successful
         result.IsSuccess.ShouldBeTrue();
         result.Value.Status.ShouldBe("success");
-            
+
         // Verify results have similarity scores
         if (result.Value.Results != null && result.Value.Results.Count > 0)
         {
@@ -163,7 +163,7 @@ public class QueryMemoryIntegrationTests : IDisposable
             }
         }
     }
-        
+
     [Fact]
     public async Task QueryMemoryService_WithSpecificTopK_LimitsResults()
     {
@@ -171,20 +171,20 @@ public class QueryMemoryIntegrationTests : IDisposable
         var queryText = "Test query with specific topK value";
         var topK = 3; // Specific value to test limit
         var input = new McpQueryInput(queryText, topK);
-            
+
         // Create test memorygrams - more than our requested topK
         await CreateTestMemorygramsAsync();
-            
+
         // Act
         _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and specific topK: {topK}");
         var result = await _memoryQueryService.QueryAsync(input);
-            
+
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.Status.ShouldBe("success");
         result.Value.Results.ShouldNotBeNull();
-            
+
         // We should get exactly the number of results we requested
         result.Value.Results.Count.ShouldBe(topK);
     }
@@ -203,7 +203,7 @@ public class QueryMemoryIntegrationTests : IDisposable
 
         var repository = _scopedServiceProvider.GetRequiredService<IMemorygramRepository>();
         var embeddingService = _scopedServiceProvider.GetRequiredService<IEmbeddingService>();
-            
+
         foreach (var content in contents)
         {
 
@@ -213,7 +213,7 @@ public class QueryMemoryIntegrationTests : IDisposable
                 _output.WriteLine($"Failed to get embedding for content: {content}");
                 continue;
             }
-                
+
             var memorygram = new Memorygram(
                 Guid.NewGuid(),
                 content,
@@ -232,7 +232,7 @@ public class QueryMemoryIntegrationTests : IDisposable
 
         // Give Neo4j a moment to index the vectors
         await Task.Delay(500);
-            
+
         return createdIds;
     }
 }

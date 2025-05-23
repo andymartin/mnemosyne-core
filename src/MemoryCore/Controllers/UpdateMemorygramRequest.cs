@@ -11,7 +11,7 @@ public class UpdateMemorygramRequest
     [Required(ErrorMessage = "Content is required")]
     [StringLength(100000, ErrorMessage = "Content cannot exceed 100000 characters")]
     public string Content { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The type of memorygram
     /// </summary>

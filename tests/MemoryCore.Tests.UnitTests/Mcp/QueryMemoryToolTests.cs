@@ -7,119 +7,118 @@ using Moq;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace MemoryCore.Tests.UnitTests.Mcp
+namespace MemoryCore.Tests.UnitTests.Mcp;
+
+public class QueryMemoryToolTests
 {
-    public class QueryMemoryToolTests
+    private readonly Mock<IMemoryQueryService> _mockMemoryQueryService;
+    private readonly Mock<ILogger<QueryMemoryTool>> _mockLogger;
+    private readonly QueryMemoryTool _queryMemoryTool;
+    private readonly ITestOutputHelper _output;
+
+    public QueryMemoryToolTests(ITestOutputHelper output)
     {
-        private readonly Mock<IMemoryQueryService> _mockMemoryQueryService;
-        private readonly Mock<ILogger<QueryMemoryTool>> _mockLogger;
-        private readonly QueryMemoryTool _queryMemoryTool;
-        private readonly ITestOutputHelper _output;
+        _output = output;
+        _mockMemoryQueryService = new Mock<IMemoryQueryService>();
+        _mockLogger = new Mock<ILogger<QueryMemoryTool>>();
+        _queryMemoryTool = new QueryMemoryTool(_mockMemoryQueryService.Object, _mockLogger.Object);
+    }
 
-        public QueryMemoryToolTests(ITestOutputHelper output)
+    [Fact]
+    public async Task QueryMemoryAsync_WithValidInput_ReturnsSuccessResult()
+    {
+        // Arrange
+        var input = new McpQueryInput("test query", 5);
+        var resultItems = new List<MemorygramResultItem>
         {
-            _output = output;
-            _mockMemoryQueryService = new Mock<IMemoryQueryService>();
-            _mockLogger = new Mock<ILogger<QueryMemoryTool>>();
-            _queryMemoryTool = new QueryMemoryTool(_mockMemoryQueryService.Object, _mockLogger.Object);
-        }
+            new MemorygramResultItem(
+                Guid.NewGuid(),
+                "Test content",
+                0.95f,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow)
+        };
+        var expectedResult = new McpQueryResult("success", resultItems, null);
 
-        [Fact]
-        public async Task QueryMemoryAsync_WithValidInput_ReturnsSuccessResult()
-        {
-            // Arrange
-            var input = new McpQueryInput("test query", 5);
-            var resultItems = new List<MemorygramResultItem>
-            {
-                new MemorygramResultItem(
-                    Guid.NewGuid(),
-                    "Test content",
-                    0.95f,
-                    DateTimeOffset.UtcNow,
-                    DateTimeOffset.UtcNow)
-            };
-            var expectedResult = new McpQueryResult("success", resultItems, null);
+        _mockMemoryQueryService
+            .Setup(x => x.QueryAsync(input))
+            .ReturnsAsync(Result.Ok(expectedResult));
 
-            _mockMemoryQueryService
-                .Setup(x => x.QueryAsync(input))
-                .ReturnsAsync(Result.Ok(expectedResult));
+        // Act
+        _output.WriteLine("Executing QueryMemoryAsync with valid input");
+        var result = await _queryMemoryTool.QueryMemoryAsync(input);
 
-            // Act
-            _output.WriteLine("Executing QueryMemoryAsync with valid input");
-            var result = await _queryMemoryTool.QueryMemoryAsync(input);
+        // Assert
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe("success");
+        result.Results.ShouldNotBeNull();
+        result.Results.Count.ShouldBe(1);
+        result.Message.ShouldBeNull();
 
-            // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("success");
-            result.Results.ShouldNotBeNull();
-            result.Results.Count.ShouldBe(1);
-            result.Message.ShouldBeNull();
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(input), Times.Once);
+    }
 
-            _mockMemoryQueryService.Verify(x => x.QueryAsync(input), Times.Once);
-        }
-
-        [Fact]
-        public async Task QueryMemoryAsync_WithNullInput_ReturnsErrorResult()
-        {
-            // Act
-            _output.WriteLine("Executing QueryMemoryAsync with null input");
+    [Fact]
+    public async Task QueryMemoryAsync_WithNullInput_ReturnsErrorResult()
+    {
+        // Act
+        _output.WriteLine("Executing QueryMemoryAsync with null input");
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            var result = await _queryMemoryTool.QueryMemoryAsync(null);
+        var result = await _queryMemoryTool.QueryMemoryAsync(null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
-            // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("error");
-            result.Results.ShouldBeNull();
-            result.Message.ShouldNotBeNull();
-            result.Message.ShouldContain("null");
+        // Assert
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe("error");
+        result.Results.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("null");
 
-            _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
-        }
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
+    }
 
-        [Fact]
-        public async Task QueryMemoryAsync_WithEmptyQueryText_ReturnsErrorResult()
-        {
-            // Arrange
-            var input = new McpQueryInput("", 5);
+    [Fact]
+    public async Task QueryMemoryAsync_WithEmptyQueryText_ReturnsErrorResult()
+    {
+        // Arrange
+        var input = new McpQueryInput("", 5);
 
-            // Act
-            _output.WriteLine("Executing QueryMemoryAsync with empty query text");
-            var result = await _queryMemoryTool.QueryMemoryAsync(input);
+        // Act
+        _output.WriteLine("Executing QueryMemoryAsync with empty query text");
+        var result = await _queryMemoryTool.QueryMemoryAsync(input);
 
-            // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("error");
-            result.Results.ShouldBeNull();
-            result.Message.ShouldNotBeNull();
-            result.Message.ShouldContain("empty");
+        // Assert
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe("error");
+        result.Results.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("empty");
 
-            _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
-        }
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
+    }
 
-        [Fact]
-        public async Task QueryMemoryAsync_WhenServiceReturnsError_ReturnsErrorResult()
-        {
-            // Arrange
-            var input = new McpQueryInput("test query", 5);
-            var errorMessage = "Test error message";
+    [Fact]
+    public async Task QueryMemoryAsync_WhenServiceReturnsError_ReturnsErrorResult()
+    {
+        // Arrange
+        var input = new McpQueryInput("test query", 5);
+        var errorMessage = "Test error message";
 
-            _mockMemoryQueryService
-                .Setup(x => x.QueryAsync(input))
-                .ReturnsAsync(Result.Fail(new Error(errorMessage)));
+        _mockMemoryQueryService
+            .Setup(x => x.QueryAsync(input))
+            .ReturnsAsync(Result.Fail(new Error(errorMessage)));
 
-            // Act
-            _output.WriteLine("Executing QueryMemoryAsync when service returns error");
-            var result = await _queryMemoryTool.QueryMemoryAsync(input);
+        // Act
+        _output.WriteLine("Executing QueryMemoryAsync when service returns error");
+        var result = await _queryMemoryTool.QueryMemoryAsync(input);
 
-            // Assert
-            result.ShouldNotBeNull();
-            result.Status.ShouldBe("error");
-            result.Results.ShouldBeNull();
-            result.Message.ShouldNotBeNull();
-            result.Message.ShouldContain(errorMessage);
+        // Assert
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe("error");
+        result.Results.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain(errorMessage);
 
-            _mockMemoryQueryService.Verify(x => x.QueryAsync(input), Times.Once);
-        }
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(input), Times.Once);
     }
 }

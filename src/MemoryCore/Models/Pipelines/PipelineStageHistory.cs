@@ -1,11 +1,9 @@
-namespace Mnemosyne.Core.Models.Pipelines
+namespace Mnemosyne.Core.Models.Pipelines;
+
+public class PipelineStageHistory
 {
-    public class PipelineStageHistory
-    {
-        public string Name { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
-        public Dictionary<string, object> Configuration { get; set; } = new();
-        public string ExecutionLog { get; set; } = string.Empty;
-    }
+    public string StageName { get; set; } = string.Empty;
+    public StageResult Result { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
+    public string? Message { get; set; }
 }

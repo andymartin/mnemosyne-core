@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Models.Pipelines;
 using Shouldly;
-using MemoryCore.Tests.IntegrationTests.Fixtures;
 
 namespace MemoryCore.Tests.IntegrationTests.Integration;
 
@@ -28,7 +28,7 @@ public class PipelinesControllerIntegrationTests
     {
         // Act
         var response = await _client.GetAsync("/api/pipelines");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var content = await response.Content.ReadFromJsonAsync<IEnumerable<PipelineManifest>>();
@@ -52,7 +52,7 @@ public class PipelinesControllerIntegrationTests
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/pipelines", manifest, _jsonOptions);
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var createdManifest = await response.Content.ReadFromJsonAsync<PipelineManifest>();
@@ -61,7 +61,7 @@ public class PipelinesControllerIntegrationTests
         createdManifest.Name.ShouldBe("Test Pipeline");
         createdManifest.Description.ShouldBe("A test pipeline for integration testing");
         createdManifest.Components.Count.ShouldBe(1);
-            
+
         // Location header should point to the created resource
         response.Headers.Location.ShouldNotBeNull();
         response.Headers.Location.ToString().ShouldBe($"/api/pipelines/{createdManifest.Id}");
@@ -82,7 +82,7 @@ public class PipelinesControllerIntegrationTests
 
         // Act
         var response = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var retrievedManifest = await response.Content.ReadFromJsonAsync<PipelineManifest>();
@@ -96,10 +96,10 @@ public class PipelinesControllerIntegrationTests
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
-            
+
         // Act
         var response = await _client.GetAsync($"/api/pipelines/{nonExistentId}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -131,7 +131,7 @@ public class PipelinesControllerIntegrationTests
 
         // Act
         var response = await _client.PutAsJsonAsync($"/api/pipelines/{createdManifest.Id}", updatedManifest);
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var returnedManifest = await response.Content.ReadFromJsonAsync<PipelineManifest>();
@@ -140,7 +140,7 @@ public class PipelinesControllerIntegrationTests
         returnedManifest.Name.ShouldBe("Updated Name");
         returnedManifest.Description.ShouldBe("Updated description");
         returnedManifest.Components.Count.ShouldBe(1);
-            
+
         // Verify the update persisted by retrieving it again
         var getResponse = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}");
         getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -160,10 +160,10 @@ public class PipelinesControllerIntegrationTests
             Name = "Won't Be Updated",
             Description = "This update should fail"
         };
-            
+
         // Act
         var response = await _client.PutAsJsonAsync($"/api/pipelines/{nonExistentId}", manifest);
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -183,10 +183,10 @@ public class PipelinesControllerIntegrationTests
 
         // Act
         var response = await _client.DeleteAsync($"/api/pipelines/{createdManifest.Id}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-            
+
         // Verify it's gone
         var getResponse = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}");
         getResponse.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -197,10 +197,10 @@ public class PipelinesControllerIntegrationTests
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
-            
+
         // Act
         var response = await _client.DeleteAsync($"/api/pipelines/{nonExistentId}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -231,15 +231,15 @@ public class PipelinesControllerIntegrationTests
 
         // Act
         var response = await _client.PostAsJsonAsync($"/api/pipelines/{createdManifest.Id}/execute", executionRequest);
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
-            
+
         // Check Location header
         response.Headers.Location.ShouldNotBeNull();
         var locationPath = response.Headers.Location.ToString();
         locationPath.ShouldStartWith($"/api/pipelines/{createdManifest.Id}/status/");
-            
+
         // Check initial status
         var initialStatus = await response.Content.ReadFromJsonAsync<PipelineExecutionStatus>(_jsonOptions);
         initialStatus.ShouldNotBeNull();
@@ -259,10 +259,10 @@ public class PipelinesControllerIntegrationTests
             UserInput = "Test input",
             SessionMetadata = new Dictionary<string, object> { { "SessionId", "test-session" } }
         };
-            
+
         // Act
         var response = await _client.PostAsJsonAsync($"/api/pipelines/{nonExistentId}/execute", executionRequest);
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -283,13 +283,13 @@ public class PipelinesControllerIntegrationTests
         var executionRequest = new PipelineExecutionRequest { UserInput = "Status test" };
         var executeResponse = await _client.PostAsJsonAsync($"/api/pipelines/{createdManifest.Id}/execute", executionRequest);
         executeResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
-            
+
         var initialStatus = await executeResponse.Content.ReadFromJsonAsync<PipelineExecutionStatus>(_jsonOptions);
         initialStatus.ShouldNotBeNull();
 
         // Act
         var response = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}/status/{initialStatus.RunId}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var status = await response.Content.ReadFromJsonAsync<PipelineExecutionStatus>(_jsonOptions);
@@ -306,12 +306,12 @@ public class PipelinesControllerIntegrationTests
         var createResponse = await _client.PostAsJsonAsync("/api/pipelines", manifest, _jsonOptions);
         var createdManifest = await createResponse.Content.ReadFromJsonAsync<PipelineManifest>();
         createdManifest.ShouldNotBeNull();
-            
+
         var nonExistentRunId = Guid.NewGuid();
-            
+
         // Act
         var response = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}/status/{nonExistentRunId}");
-            
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -335,7 +335,7 @@ public class PipelinesControllerIntegrationTests
         // Act - Execute the pipeline
         var executeResponse = await _client.PostAsJsonAsync($"/api/pipelines/{createdManifest.Id}/execute", executionRequest);
         executeResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
-            
+
         var initialStatus = await executeResponse.Content.ReadFromJsonAsync<PipelineExecutionStatus>(_jsonOptions);
         initialStatus.ShouldNotBeNull();
 
@@ -343,12 +343,12 @@ public class PipelinesControllerIntegrationTests
         var timeout = TimeSpan.FromSeconds(5);
         var startTime = DateTime.UtcNow;
         PipelineExecutionStatus? finalStatus = null;
-            
+
         while (DateTime.UtcNow - startTime < timeout && (finalStatus == null || finalStatus.Status != PipelineStatus.Completed))
         {
             // Wait a bit between polls
             await Task.Delay(200);
-                
+
             // Get current status
             var statusResponse = await _client.GetAsync($"/api/pipelines/{createdManifest.Id}/status/{initialStatus.RunId}");
             if (statusResponse.IsSuccessStatusCode)

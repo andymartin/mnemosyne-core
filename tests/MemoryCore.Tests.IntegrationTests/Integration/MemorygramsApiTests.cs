@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemosyne.Core.Controllers;
 using Mnemosyne.Core.Models;
-using MemoryCore.Tests.IntegrationTests.Fixtures;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -30,23 +30,23 @@ public class MemorygramsApiTests
         _neo4jFixture = neo4jFixture;
         _embeddingFixture = embeddingFixture;
         _output = output;
-            
+
         _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
         _client = _factory.CreateClient();
         _jsonOptions = _factory.Services.GetRequiredService<JsonSerializerOptions>(); // Initialize from DI
     }
-    
+
     private Memorygram DeserializeMemorygram(string json)
     {
         _output.WriteLine($"DEBUG JSON: {json}");
-        
+
         // Create custom options to handle the enum
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             Converters = { new JsonStringEnumConverter() }
         };
-        
+
         return JsonSerializer.Deserialize<Memorygram>(json, options)!;
     }
 
@@ -54,7 +54,7 @@ public class MemorygramsApiTests
     {
         var response = await _client.PostAsJsonAsync("/memorygrams", request); // Uses globally configured options
         response.StatusCode.ShouldBe(expectedStatusCode, $"Failed to create memorygram for test setup. Status: {response.StatusCode}, Reason: {response.ReasonPhrase}, Content: {await response.Content.ReadAsStringAsync()}");
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var memorygram = DeserializeMemorygram(jsonString);
         memorygram.ShouldNotBeNull("Deserialized memorygram should not be null after a successful creation.");
@@ -77,7 +77,7 @@ public class MemorygramsApiTests
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         response.Headers.Location.ShouldNotBeNull();
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
@@ -108,13 +108,13 @@ public class MemorygramsApiTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
         content!.Id.ToString().ShouldBe(id);
         content.Content.ShouldBe(createRequest.Content);
-            
+
         // Verify embedding exists and has the correct dimension
         content.VectorEmbedding.ShouldNotBeNull();
         content.VectorEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
@@ -176,7 +176,7 @@ public class MemorygramsApiTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
@@ -241,7 +241,7 @@ public class MemorygramsApiTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
@@ -253,7 +253,7 @@ public class MemorygramsApiTests
     {
         // Arrange
         var nonExistingId = Guid.NewGuid().ToString();
-            
+
         // Create a valid target memorygram
         var targetCreateRequest = new CreateMemorygramRequest
         {
@@ -305,7 +305,7 @@ public class MemorygramsApiTests
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
-    
+
     [Fact]
     public async Task UpdateMemorygram_WithValidRequest_ReturnsOk()
     {
@@ -316,7 +316,7 @@ public class MemorygramsApiTests
             Content = "Test API update content",
             Type = MemorygramType.Chat
         };
-    
+
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
         var id = createdMemorygram.Id.ToString();
 
@@ -326,13 +326,13 @@ public class MemorygramsApiTests
             Content = "Updated via PUT",
             Type = MemorygramType.Chat
         };
-    
+
         // Act
         var response = await _client.PutAsJsonAsync($"/memorygrams/{id}", updateRequest);
-    
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
@@ -354,14 +354,14 @@ public class MemorygramsApiTests
             Content = "This won't be updated",
             Type = MemorygramType.Chat
         };
-    
+
         // Act
         var response = await _client.PutAsJsonAsync($"/memorygrams/{nonExistingId}", updateRequest);
-    
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
-    
+
     [Fact]
     public async Task UpdateMemorygram_WithEmptyContent_ReturnsBadRequest()
     {
@@ -371,7 +371,7 @@ public class MemorygramsApiTests
         {
             Content = "Test API update content"
         };
-    
+
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
         var id = createdMemorygram.Id.ToString();
 
@@ -381,14 +381,14 @@ public class MemorygramsApiTests
             Content = "",
             Type = MemorygramType.Chat
         };
-    
+
         // Act
         var response = await _client.PutAsJsonAsync($"/memorygrams/{id}", updateRequest);
-    
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
-    
+
     [Fact]
     public async Task UpdateMemorygram_WithNoUpdateParameters_ReturnsBadRequest()
     {
@@ -399,16 +399,16 @@ public class MemorygramsApiTests
             Content = "Test API update content",
             Type = MemorygramType.Chat
         };
-    
+
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
         var id = createdMemorygram.Id.ToString();
 
         // Create empty update request
         var updateRequest = new UpdateMemorygramRequest();
-    
+
         // Act
         var response = await _client.PutAsJsonAsync($"/memorygrams/{id}", updateRequest);
-    
+
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -429,7 +429,7 @@ public class MemorygramsApiTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
-            
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var content = DeserializeMemorygram(jsonString);
         content.ShouldNotBeNull();
