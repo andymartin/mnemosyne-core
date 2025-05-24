@@ -40,6 +40,8 @@ public class MemorygramsController : ControllerBase
                 request.Content,
                 request.Type,
                 Array.Empty<float>(),
+                "User", // Default source for new memorygrams from user input
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
             );
@@ -159,7 +161,9 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Id,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
+            existingMemorygram.VectorEmbedding,
+            existingMemorygram.Source, // Preserve existing source
+            existingMemorygram.Timestamp, // Preserve existing timestamp
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow
         );
@@ -242,7 +246,9 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Id,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding, // Keep existing embedding - will be updated by MemorygramService if content changed
+            existingMemorygram.VectorEmbedding,
+            existingMemorygram.Source,
+            existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow
         );

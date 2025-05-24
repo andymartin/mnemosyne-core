@@ -2,6 +2,10 @@ using FluentResults;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
 using Neo4j.Driver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Mnemosyne.Core.Persistence;
 
@@ -29,21 +33,27 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                             m.content = $content,
                             m.vectorEmbedding = $vectorEmbedding,
                             m.type = $type,
+                            m.source = $source,
+                            m.timestamp = $timestamp,
                             m.createdAt = datetime(),
                             m.updatedAt = datetime()
                         ON MATCH SET
                             m.content = $content,
                             m.vectorEmbedding = $vectorEmbedding,
                             m.type = $type,
+                            m.source = $source,
+                            m.timestamp = $timestamp,
                             m.updatedAt = datetime()
-                        RETURN m.id, m.content, m.vectorEmbedding, m.type, m.createdAt, m.updatedAt";
+                        RETURN m.id, m.content, m.vectorEmbedding, m.type, m.source, m.timestamp, m.createdAt, m.updatedAt";
 
                 var parameters = new
                 {
                     id = memorygram.Id.ToString(),
                     content = memorygram.Content,
                     vectorEmbedding = memorygram.VectorEmbedding,
-                    type = memorygram.Type.ToString()
+                    type = memorygram.Type.ToString(),
+                    source = memorygram.Source,
+                    timestamp = memorygram.Timestamp
                 };
 
                 var cursor = await tx.RunAsync(query, parameters);
@@ -55,6 +65,8 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["m.content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["m.type"].As<string>()),
                         ConvertToFloatArray(record["m.vectorEmbedding"]),
+                        record["m.source"].As<string>(),
+                        record["m.timestamp"].As<long>(),
                         ConvertToDateTime(record["m.createdAt"]),
                         ConvertToDateTime(record["m.updatedAt"])
                     ));
@@ -76,7 +88,6 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         {
             await using var session = _driver.AsyncSession();
 
-            // First check if source memorygram exists
             var sourceExists = await session.ExecuteReadAsync(async tx =>
             {
                 var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
@@ -95,7 +106,6 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                 return Result.Fail<Memorygram>($"Memorygram with ID {fromId} not found");
             }
 
-            // Then check if target memorygram exists
             var targetExists = await session.ExecuteReadAsync(async tx =>
             {
                 var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
@@ -114,7 +124,6 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                 return Result.Fail<Memorygram>($"Memorygram with ID {toId} not found");
             }
 
-            // If both exist, create the association
             return await session.ExecuteWriteAsync(async tx =>
             {
                 var query = @"
@@ -123,7 +132,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         MERGE (a)-[r:ASSOCIATED_WITH]->(b)
                         SET r.weight = $weight
                         RETURN a.id as id, a.content as content, a.vectorEmbedding as vectorEmbedding,
-                               a.type as type, a.createdAt as createdAt, a.updatedAt as updatedAt";
+                               a.type as type, a.source as source, a.timestamp as timestamp, a.createdAt as createdAt, a.updatedAt as updatedAt";
 
                 var parameters = new
                 {
@@ -141,6 +150,8 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
                         ConvertToFloatArray(record["vectorEmbedding"]),
+                        record["source"].As<string>(),
+                        record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"])
                     ));
@@ -167,12 +178,11 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                 var query = @"
                         MATCH (m:Memorygram {id: $id})
                         RETURN m.id as id, m.content as content, m.vectorEmbedding as vectorEmbedding,
-                               m.type as type, m.createdAt as createdAt, m.updatedAt as updatedAt";
+                               m.type as type, m.source as source, m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt";
 
                 var parameters = new { id = id.ToString() };
                 var cursor = await tx.RunAsync(query, parameters);
 
-                // Check if we have a record
                 if (await cursor.FetchAsync())
                 {
                     var record = cursor.Current;
@@ -181,12 +191,13 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
                         ConvertToFloatArray(record["vectorEmbedding"]),
+                        record["source"].As<string>(),
+                        record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"])
                     ));
                 }
 
-                // No record found
                 _logger.LogWarning("Memorygram with ID {Id} not found", id);
                 return Result.Fail<Memorygram>($"Memorygram with ID {id} not found");
             });
@@ -216,11 +227,11 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
 
             return await session.ExecuteReadAsync(async tx =>
             {
-                // Use the vector index to find similar memorygrams
                 var query = @"
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
                         RETURN node.id AS id, node.content AS content, node.type AS type,
+                               node.source AS source, node.timestamp AS timestamp,
                                node.createdAt AS createdAt, node.updatedAt AS updatedAt,
                                score
                         ORDER BY score DESC";
@@ -265,11 +276,9 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         if (vectorObj == null)
             return Array.Empty<float>();
 
-        // If it's already a float array, return it
         if (vectorObj is float[] floatArray)
             return floatArray;
 
-        // If it's a list, convert it
         if (vectorObj is System.Collections.IEnumerable enumerable)
         {
             var list = new List<float>();
@@ -293,14 +302,12 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                 }
                 else if (item != null)
                 {
-                    // Try to convert using Convert.ToSingle
                     try
                     {
                         list.Add(Convert.ToSingle(item));
                     }
                     catch
                     {
-                        // If conversion fails, use 0.0f
                         list.Add(0.0f);
                     }
                 }
@@ -308,7 +315,6 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
             return list.ToArray();
         }
 
-        // If all else fails, return an empty array
         return Array.Empty<float>();
     }
 
@@ -317,35 +323,28 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         if (dateObj == null)
             return DateTimeOffset.UtcNow;
 
-        // If it's already a DateTimeOffset, return it
         if (dateObj is DateTimeOffset dateTimeOffset)
             return dateTimeOffset;
 
-        // If it's a DateTime, convert it to DateTimeOffset
         if (dateObj is DateTime dateTime)
             return new DateTimeOffset(dateTime, TimeSpan.Zero);
 
-        // If it's a string, try to parse it
         if (dateObj is string dateString)
         {
             if (DateTimeOffset.TryParse(dateString, out var parsedDate))
                 return parsedDate;
         }
 
-        // If it's a ZonedDateTime or other temporal type, try to get its value
         try
         {
-            // Get the string representation and parse it
             string? temporalString = dateObj?.ToString();
             if (!string.IsNullOrEmpty(temporalString) && DateTimeOffset.TryParse(temporalString, out var parsedTemporal))
                 return parsedTemporal;
         }
         catch
         {
-            // Ignore conversion errors
         }
 
-        // If all else fails, return current UTC time
         return DateTimeOffset.UtcNow;
     }
 }

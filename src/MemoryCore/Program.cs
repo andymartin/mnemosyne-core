@@ -6,6 +6,7 @@ using Mnemosyne.Core.Controllers;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Mcp;
 using Mnemosyne.Core.Models;
+using Mnemosyne.Core.Models.Pipelines;
 using Mnemosyne.Core.Persistence;
 using Mnemosyne.Core.Services;
 using Neo4j.Driver;
@@ -84,6 +85,76 @@ public partial class Program
             return Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(options.TimeoutSeconds));
         });
 
+        // Configure LanguageModel options
+        builder.Services.Configure<LanguageModelOptions>(
+            builder.Configuration.GetSection("LanguageModels"));
+
+        // Configure HttpClient for Language Model Service with resilience policies
+        builder.Services.AddHttpClient<ILanguageModelService, LanguageModelService>((serviceProvider, client) =>
+        {
+            // BaseAddress and Authorization are set per-request in LanguageModelService
+            // No need to set them here globally
+        })
+        .AddPolicyHandler((serviceProvider, _) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value;
+            return HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .Or<TimeoutRejectedException>()
+                .WaitAndRetryAsync(
+                    options.MaxRetryAttempts,
+                    retryAttempt => TimeSpan.FromMilliseconds(options.RetryDelayMilliseconds * Math.Pow(2, retryAttempt - 1)),
+                    onRetry: (outcome, timespan, retryAttempt, context) =>
+                    {
+                        var logger = serviceProvider.GetRequiredService<ILogger<LanguageModelService>>();
+                        logger.LogWarning(
+                            "Retrying request to Language Model Service after {RetryAttempt} attempts due to {StatusCode}: {Message}",
+                            retryAttempt,
+                            outcome.Result?.StatusCode,
+                            outcome.Exception?.Message);
+                    });
+        })
+        .AddPolicyHandler((serviceProvider, _) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value;
+            return Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        });
+
+        // Configure LanguageModel options
+        builder.Services.Configure<LanguageModelOptions>(
+            builder.Configuration.GetSection("LanguageModels"));
+
+        // Configure HttpClient for Language Model Service with resilience policies
+        builder.Services.AddHttpClient<ILanguageModelService, LanguageModelService>((serviceProvider, client) =>
+        {
+            // BaseAddress and Authorization are set per-request in LanguageModelService
+            // No need to set them here globally
+        })
+        .AddPolicyHandler((serviceProvider, _) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value; // Using EmbeddingServiceOptions for retry policy for now
+            return HttpPolicyExtensions
+                .HandleTransientHttpError() // HttpRequestException, 5XX and 408 status codes
+                .Or<TimeoutRejectedException>() // Thrown by Polly's TimeoutPolicy
+                .WaitAndRetryAsync(
+                    options.MaxRetryAttempts,
+                    retryAttempt => TimeSpan.FromMilliseconds(options.RetryDelayMilliseconds * Math.Pow(2, retryAttempt - 1)),
+                    onRetry: (outcome, timespan, retryAttempt, context) =>
+                    {
+                        var logger = serviceProvider.GetRequiredService<ILogger<LanguageModelService>>();
+                        logger.LogWarning(
+                            "Retrying request to Language Model Service after {RetryAttempt} attempts due to {StatusCode}: {Message}",
+                            retryAttempt,
+                            outcome.Result?.StatusCode,
+                            outcome.Exception?.Message);
+                    });
+        })
+        .AddPolicyHandler((serviceProvider, _) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value; // Using EmbeddingServiceOptions for timeout for now
+            return Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        });
+
         // Add repository and services
         builder.Services.AddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
         builder.Services.AddSingleton<IMemorygramService, MemorygramService>();
@@ -100,6 +171,18 @@ public partial class Program
         // Register Pipelines Repository and Service
         builder.Services.AddSingleton<IPipelinesRepository, FilePipelinesRepository>();
         builder.Services.AddSingleton<IPipelinesService, PipelinesService>();
+        builder.Services.AddSingleton<IPipelineExecutorService, PipelineExecutorService>();
+        builder.Services.AddSingleton<IPromptConstructor, PromptConstructor>();
+        builder.Services.AddSingleton<IResponderService, ResponderService>();
+
+        // Register Pipeline Stages
+        builder.Services.AddTransient<UserInputStage>();
+        builder.Services.AddSingleton<IPipelineExecutorService, PipelineExecutorService>(); // Register PipelineExecutorService
+        builder.Services.AddSingleton<IPromptConstructor, PromptConstructor>(); // Register PromptConstructor
+        builder.Services.AddSingleton<IResponderService, ResponderService>(); // Register ResponderService
+
+        // Register Pipeline Stages
+        builder.Services.AddTransient<UserInputStage>(); // Register UserInputStage
 
         // Register MCP server
         builder.Services.AddMcpServer()

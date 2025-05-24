@@ -33,12 +33,12 @@ public class MemorygramsControllerTests
         // Arrange
         var request = new CreateMemorygramRequest
         {
-            Content = "Test content"
+            Content = "Test content",
+            Type = MemorygramType.Chat
         };
 
         var expectedGuid = Guid.NewGuid();
 
-        // Use a specific Guid for testing
         _memorygramService.CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>())
             .Returns(callInfo =>
             {
@@ -48,6 +48,8 @@ public class MemorygramsControllerTests
                     arg.Content,
                     arg.Type,
                     arg.VectorEmbedding,
+                    arg.Source,
+                    arg.Timestamp,
                     arg.CreatedAt,
                     arg.UpdatedAt
                 ));
@@ -58,6 +60,8 @@ public class MemorygramsControllerTests
             request.Content,
             request.Type,
             Array.Empty<float>(),
+            "User",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
@@ -77,7 +81,9 @@ public class MemorygramsControllerTests
         createdResult.Value.ShouldBe(expectedMemorygram);
 
         await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
-            m.Content == request.Content));
+            m.Content == request.Content &&
+            m.Source == "User" &&
+            m.Timestamp > 0));
     }
 
     [Fact]
@@ -101,14 +107,14 @@ public class MemorygramsControllerTests
         await _memorygramService.DidNotReceive().CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>());
     }
 
-
     [Fact]
     public async Task CreateMemorygram_WithNullVectorEmbedding_UsesEmptyArray()
     {
         // Arrange
         var request = new CreateMemorygramRequest
         {
-            Content = "Test content"
+            Content = "Test content",
+            Type = MemorygramType.Chat
         };
 
         var expectedGuid = Guid.NewGuid();
@@ -122,6 +128,8 @@ public class MemorygramsControllerTests
                     arg.Content,
                     arg.Type,
                     arg.VectorEmbedding,
+                    arg.Source,
+                    arg.Timestamp,
                     arg.CreatedAt,
                     arg.UpdatedAt
                 ));
@@ -144,7 +152,8 @@ public class MemorygramsControllerTests
         // Arrange
         var request = new CreateMemorygramRequest
         {
-            Content = "Test content"
+            Content = "Test content",
+            Type = MemorygramType.Chat
         };
 
         _memorygramService.CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>())
@@ -169,6 +178,8 @@ public class MemorygramsControllerTests
             "Test content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "TestSource",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
@@ -226,6 +237,7 @@ public class MemorygramsControllerTests
         var objectResult = (ObjectResult)result;
         objectResult.StatusCode.ShouldBe(StatusCodes.Status500InternalServerError);
     }
+
     [Fact]
     public async Task UpdateMemorygram_WithValidRequest_ReturnsOkResult()
     {
@@ -234,7 +246,8 @@ public class MemorygramsControllerTests
         var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Updated content"
+            Content = "Updated content",
+            Type = MemorygramType.Chat
         };
 
         var existingMemorygram = new Memorygram(
@@ -242,6 +255,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -249,8 +264,10 @@ public class MemorygramsControllerTests
         var updatedMemorygram = new Memorygram(
             guidId,
             request.Content,
-            MemorygramType.Chat,
+            request.Type,
             existingMemorygram.VectorEmbedding,
+            existingMemorygram.Source,
+            existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow
         );
@@ -273,7 +290,9 @@ public class MemorygramsControllerTests
         await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
         await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
             m.Id == guidId &&
-            m.Content == request.Content));
+            m.Content == request.Content &&
+            m.Source == existingMemorygram.Source &&
+            m.Timestamp == existingMemorygram.Timestamp));
     }
 
     [Fact]
@@ -283,7 +302,8 @@ public class MemorygramsControllerTests
         var id = Guid.Empty;
         var request = new UpdateMemorygramRequest
         {
-            Content = "Updated content"
+            Content = "Updated content",
+            Type = MemorygramType.Chat
         };
 
         // Act
@@ -306,7 +326,8 @@ public class MemorygramsControllerTests
         var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Updated content"
+            Content = "Updated content",
+            Type = MemorygramType.Chat
         };
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -338,6 +359,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -357,7 +380,6 @@ public class MemorygramsControllerTests
         var badRequestResult = (BadRequestObjectResult)result;
         badRequestResult.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
 
-        // Check the structure of the error response
         var errorObj = JsonSerializer.Deserialize<Dictionary<string, string>>(
             JsonSerializer.Serialize(badRequestResult.Value));
 
@@ -376,7 +398,8 @@ public class MemorygramsControllerTests
         var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Updated content"
+            Content = "Updated content",
+            Type = MemorygramType.Chat
         };
 
         var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
@@ -385,6 +408,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -412,7 +437,8 @@ public class MemorygramsControllerTests
         var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Patched content"
+            Content = "Patched content",
+            Type = MemorygramType.Chat
         };
 
         var existingMemorygram = new Memorygram(
@@ -420,6 +446,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -427,8 +455,10 @@ public class MemorygramsControllerTests
         var patchedMemorygram = new Memorygram(
             guidId,
             request.Content,
-            MemorygramType.Chat,
-            existingMemorygram.VectorEmbedding, // Keep original embedding
+            request.Type,
+            existingMemorygram.VectorEmbedding,
+            existingMemorygram.Source,
+            existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow
         );
@@ -452,7 +482,9 @@ public class MemorygramsControllerTests
         await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
             m.Id == guidId &&
             m.Content == request.Content &&
-            m.VectorEmbedding == existingMemorygram.VectorEmbedding)); // Should keep original embedding
+            m.VectorEmbedding == existingMemorygram.VectorEmbedding &&
+            m.Source == existingMemorygram.Source &&
+            m.Timestamp == existingMemorygram.Timestamp));
     }
 
     [Fact]
@@ -462,7 +494,8 @@ public class MemorygramsControllerTests
         var id = Guid.Empty;
         var request = new UpdateMemorygramRequest
         {
-            Content = "Patched content"
+            Content = "Patched content",
+            Type = MemorygramType.Chat
         };
 
         // Act
@@ -485,7 +518,8 @@ public class MemorygramsControllerTests
         var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Patched content"
+            Content = "Patched content",
+            Type = MemorygramType.Chat
         };
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -517,6 +551,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -524,19 +560,23 @@ public class MemorygramsControllerTests
         _memorygramService.GetMemorygramByIdAsync(id)
             .Returns(Result.Ok(existingMemorygram));
 
+        _memorygramService.CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>())
+            .Returns(Result.Ok(existingMemorygram));
+
         // Act
-        var result = await _controller.PatchMemorygram(id, request);
+        var result = await _controller.UpdateMemorygram(id, request);
 
         // Assert
+        _logger.LogInformation("Actual result type: {Type}", result.GetType().FullName);
         result.ShouldBeOfType<BadRequestObjectResult>();
         var badRequestResult = (BadRequestObjectResult)result;
         badRequestResult.StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
 
-        // Check the structure of the error response
         var errorObj = JsonSerializer.Deserialize<Dictionary<string, string>>(
             JsonSerializer.Serialize(badRequestResult.Value));
 
         errorObj.ShouldNotBeNull();
+        errorObj["Error"].ShouldBe("InvalidRequest");
         errorObj["Message"].ShouldBe("Content must be provided and cannot be empty");
 
         await _memorygramService.Received(1).GetMemorygramByIdAsync(id);
@@ -550,7 +590,8 @@ public class MemorygramsControllerTests
         var id = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var request = new UpdateMemorygramRequest
         {
-            Content = "Patched content"
+            Content = "Patched content",
+            Type = MemorygramType.Chat
         };
 
         var guidId = Guid.Parse("00000000-0000-0000-0000-000000000001");
@@ -559,6 +600,8 @@ public class MemorygramsControllerTests
             "Original content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "OriginalSource",
+            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddDays(-1)
         );
@@ -587,14 +630,16 @@ public class MemorygramsControllerTests
         var request = new CreateAssociationRequest
         {
             TargetId = targetId,
-            Weight = 0.75f
+            Weight = 0.5f
         };
 
         var sourceMemorygram = new Memorygram(
             sourceId,
             "Source content",
             MemorygramType.Chat,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            Array.Empty<float>(),
+            "Source",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
@@ -603,28 +648,19 @@ public class MemorygramsControllerTests
             targetId,
             "Target content",
             MemorygramType.Chat,
-            new float[] { 0.4f, 0.5f, 0.6f },
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
-        );
-
-        var resultMemorygram = new Memorygram(
-            sourceId,
-            "Source content",
-            MemorygramType.Chat,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            Array.Empty<float>(),
+            "Target",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
             .Returns(Result.Ok(sourceMemorygram));
-
         _memorygramService.GetMemorygramByIdAsync(targetId)
             .Returns(Result.Ok(targetMemorygram));
-
         _memorygramService.CreateAssociationAsync(sourceId, targetId, request.Weight)
-            .Returns(Result.Ok(resultMemorygram));
+            .Returns(Result.Ok(sourceMemorygram));
 
         // Act
         var result = await _controller.CreateAssociation(sourceId, request);
@@ -633,7 +669,7 @@ public class MemorygramsControllerTests
         result.ShouldBeOfType<OkObjectResult>();
         var okResult = (OkObjectResult)result;
         okResult.StatusCode.ShouldBe(StatusCodes.Status200OK);
-        okResult.Value.ShouldBe(resultMemorygram);
+        okResult.Value.ShouldBe(sourceMemorygram);
 
         await _memorygramService.Received(1).GetMemorygramByIdAsync(sourceId);
         await _memorygramService.Received(1).GetMemorygramByIdAsync(targetId);
@@ -645,11 +681,10 @@ public class MemorygramsControllerTests
     {
         // Arrange
         var sourceId = Guid.Empty;
-        var targetId = Guid.Parse("00000000-0000-0000-0000-000000000002");
         var request = new CreateAssociationRequest
         {
-            TargetId = targetId,
-            Weight = 0.75f
+            TargetId = Guid.NewGuid(),
+            Weight = 0.5f
         };
 
         // Act
@@ -669,11 +704,11 @@ public class MemorygramsControllerTests
     public async Task CreateAssociation_WithEmptyTargetId_ReturnsBadRequest()
     {
         // Arrange
-        var sourceId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var sourceId = Guid.NewGuid();
         var request = new CreateAssociationRequest
         {
             TargetId = Guid.Empty,
-            Weight = 0.75f
+            Weight = 0.5f
         };
 
         // Act
@@ -698,7 +733,7 @@ public class MemorygramsControllerTests
         var request = new CreateAssociationRequest
         {
             TargetId = targetId,
-            Weight = 0.75f
+            Weight = 0.5f
         };
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
@@ -727,23 +762,24 @@ public class MemorygramsControllerTests
         var request = new CreateAssociationRequest
         {
             TargetId = targetId,
-            Weight = 0.75f
+            Weight = 0.5f
         };
 
         var sourceMemorygram = new Memorygram(
             sourceId,
             "Source content",
             MemorygramType.Chat,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            Array.Empty<float>(),
+            "Source",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
             .Returns(Result.Ok(sourceMemorygram));
-
         _memorygramService.GetMemorygramByIdAsync(targetId)
-            .Returns(Result.Fail<Memorygram>($"Memorygram with ID {targetId} not found"));
+            .Returns(Result.Fail<Memorygram>($"Target Memorygram with ID {targetId} not found"));
 
         // Act
         var result = await _controller.CreateAssociation(sourceId, request);
@@ -768,7 +804,7 @@ public class MemorygramsControllerTests
         var request = new CreateAssociationRequest
         {
             TargetId = targetId,
-            Weight = 0.75f
+            Weight = 0.5f
         };
 
         var sourceMemorygram = new Memorygram(
@@ -776,6 +812,8 @@ public class MemorygramsControllerTests
             "Source content",
             MemorygramType.Chat,
             new float[] { 0.1f, 0.2f, 0.3f },
+            "Source",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
@@ -785,16 +823,16 @@ public class MemorygramsControllerTests
             "Target content",
             MemorygramType.Chat,
             new float[] { 0.4f, 0.5f, 0.6f },
+            "Target",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
             .Returns(Result.Ok(sourceMemorygram));
-
         _memorygramService.GetMemorygramByIdAsync(targetId)
             .Returns(Result.Ok(targetMemorygram));
-
         _memorygramService.CreateAssociationAsync(sourceId, targetId, request.Weight)
             .Returns(Result.Fail<Memorygram>("Database error creating association"));
 

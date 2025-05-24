@@ -1,6 +1,12 @@
 using FluentResults;
+using Microsoft.Extensions.Logging;
 using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Models.Pipelines;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Mnemosyne.Core.Services;
 
@@ -9,85 +15,113 @@ public class ResponderService : IResponderService
     private readonly IPipelineExecutorService _pipelineExecutorService;
     private readonly IPipelinesRepository _pipelinesRepository;
     private readonly IPromptConstructor _promptConstructor;
+    private readonly ILanguageModelService _languageModelService;
+    private readonly IMemorygramService _memorygramService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<ResponderService> _logger;
-    // private readonly IMemorygramService _memorygramService; // For actual memory formation
 
     public ResponderService(
         IPipelineExecutorService pipelineExecutorService,
         IPipelinesRepository pipelinesRepository,
         IPromptConstructor promptConstructor,
-        ILogger<ResponderService> logger
-        // IMemorygramService memorygramService
-        )
+        ILanguageModelService languageModelService,
+        IMemorygramService memorygramService,
+        IEmbeddingService embeddingService,
+        ILogger<ResponderService> logger)
     {
         _pipelineExecutorService = pipelineExecutorService ?? throw new ArgumentNullException(nameof(pipelineExecutorService));
         _pipelinesRepository = pipelinesRepository ?? throw new ArgumentNullException(nameof(pipelinesRepository));
         _promptConstructor = promptConstructor ?? throw new ArgumentNullException(nameof(promptConstructor));
+        _languageModelService = languageModelService ?? throw new ArgumentNullException(nameof(languageModelService));
+        _memorygramService = memorygramService ?? throw new ArgumentNullException(nameof(memorygramService));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        // _memorygramService = memorygramService ?? throw new ArgumentNullException(nameof(memorygramService));
     }
 
     public async Task<Result<string>> ProcessRequestAsync(PipelineExecutionRequest request)
     {
-        _logger.LogInformation("Reflective Responder received request. UserInput: {UserInput}", request.UserInput);
+        _logger.LogInformation("ResponderService received request. UserInput: {UserInput}", request.UserInput);
 
-        // 1. Use IPipelinesRepository to get the pipeline manifest
-        var manifestResult = await _pipelinesRepository.GetPipelineAsync(request.PipelineId);
-        if (manifestResult.IsFailed)
+        var getManifestResult = await _pipelinesRepository.GetPipelineAsync(request.PipelineId);
+        if (getManifestResult.IsFailed)
         {
-            _logger.LogError("Failed to retrieve pipeline manifest for ID {PipelineId}: {Errors}", request.PipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
-            return Result.Fail<string>($"Failed to retrieve pipeline manifest: {string.Join(", ", manifestResult.Errors.Select(e => e.Message))}");
-        }
-        var manifest = manifestResult.Value;
-        _logger.LogInformation("Successfully retrieved pipeline manifest: {PipelineName}", manifest.Name);
-
-        // 2. Invoke the pipeline (CPP) using IPipelineExecutorService
-        _logger.LogInformation("Reflective Responder invoking CPP pipeline {PipelineId}", request.PipelineId);
-        var pipelineExecutionStateResult = await _pipelineExecutorService.ExecutePipelineAsync(request.PipelineId, request);
-
-        if (pipelineExecutionStateResult.IsFailed)
-        {
-            _logger.LogError("CPP pipeline execution failed for PipelineId {PipelineId}: {Errors}", request.PipelineId, string.Join(", ", pipelineExecutionStateResult.Errors.Select(e => e.Message)));
-            return Result.Fail<string>($"CPP pipeline execution failed: {string.Join(", ", pipelineExecutionStateResult.Errors.Select(e => e.Message))}");
+            _logger.LogError("Failed to retrieve pipeline manifest for ID {PipelineId}: {Errors}",
+                request.PipelineId, getManifestResult.Errors);
+            return Result.Fail<string>($"Failed to retrieve pipeline manifest: {getManifestResult.Errors.First().Message}");
         }
 
-        var pipelineExecutionState = pipelineExecutionStateResult.Value;
-        _logger.LogInformation("CPP pipeline {PipelineId} executed successfully. Final RunId: {RunId}", request.PipelineId, pipelineExecutionState.RunId);
+        var manifest = getManifestResult.Value;
+        _logger.LogInformation("Retrieved pipeline manifest: {PipelineName}", manifest.Name);
 
+        var state = new PipelineExecutionState
+        {
+            RunId = Guid.NewGuid(),
+            PipelineId = request.PipelineId,
+            Request = request,
+            History = new List<PipelineStageHistory>()
+        };
 
-        // 3. After the pipeline completes, use the Prompt Constructor to reify the prompt
-        _logger.LogInformation("Constructing prompt for RunId: {RunId}", pipelineExecutionState.RunId);
-        var promptResult = _promptConstructor.ConstructPrompt(pipelineExecutionState);
+        var executionResult = await _pipelineExecutorService.ExecutePipelineAsync(request.PipelineId, request);
+
+        if (executionResult.IsFailed)
+        {
+            _logger.LogError("Pipeline execution failed: {Errors}", executionResult.Errors);
+            return Result.Fail<string>($"Pipeline execution failed: {executionResult.Errors.First().Message}");
+        }
+
+        var finalState = executionResult.Value;
+        _logger.LogInformation("Pipeline execution completed successfully. Final state context chunks: {Count}", finalState.Context.Count);
+
+        var promptResult = _promptConstructor.ConstructPrompt(finalState);
         if (promptResult.IsFailed)
         {
-            _logger.LogError("Prompt construction failed for RunId {RunId}: {Errors}", pipelineExecutionState.RunId, string.Join(", ", promptResult.Errors.Select(e => e.Message)));
-            return Result.Fail<string>($"Prompt construction failed: {string.Join(", ", promptResult.Errors.Select(e => e.Message))}");
+            _logger.LogError("Failed to construct prompt: {Errors}", promptResult.Errors);
+            return Result.Fail<string>($"Failed to construct prompt: {promptResult.Errors.First().Message}");
         }
-        var prompt = promptResult.Value;
-        _logger.LogInformation("Prompt constructed successfully for RunId: {RunId}", pipelineExecutionState.RunId);
 
-        // 4. Send prompt to Master LLM (mocked for MVP)
-        _logger.LogInformation("Sending prompt to Master LLM (mocked) for RunId: {RunId}", pipelineExecutionState.RunId);
-        var masterLlmResponse = $"Mocked Master LLM response for prompt: '{prompt}'"; // Mock response
+        var chatCompletionRequest = promptResult.Value;
+        _logger.LogInformation("Constructed chat completion request with {MessageCount} messages.", chatCompletionRequest.Messages.Count);
 
-        // 5. Invoke memory formation for RR's own response (mocked for MVP)
-        _logger.LogInformation("Invoking memory formation (mocked) for RunId: {RunId}", pipelineExecutionState.RunId);
-        // await _memorygramService.CreateMemorygramAsync(new Memorygram { /* ... details ... */ });
-
-        // 6. Evaluate response (mocked for MVP)
-        _logger.LogInformation("Evaluating Master LLM response (mocked) for RunId: {RunId}", pipelineExecutionState.RunId);
-        var isResponseSatisfactory = true; // Assume satisfactory for MVP
-
-        if (isResponseSatisfactory)
+        var llmResponseResult = await _languageModelService.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master);
+        if (llmResponseResult.IsFailed)
         {
-            _logger.LogInformation("Response evaluated as satisfactory for RunId: {RunId}", pipelineExecutionState.RunId);
-            return Result.Ok(masterLlmResponse);
+            _logger.LogError("Failed to generate LLM completion: {Errors}", llmResponseResult.Errors);
+            return Result.Fail<string>($"Failed to generate LLM completion: {llmResponseResult.Errors.First().Message}");
+        }
+
+        var llmResponse = llmResponseResult.Value;
+        _logger.LogInformation("Received LLM response (truncated for log): {Response}", llmResponse.Length > 200 ? llmResponse.Substring(0, 200) + "..." : llmResponse);
+
+        var embeddingResult = await _embeddingService.GetEmbeddingAsync(llmResponse);
+        if (embeddingResult.IsFailed)
+        {
+            _logger.LogWarning("Failed to generate embedding for LLM response: {Errors}", embeddingResult.Errors);
         }
         else
         {
-            _logger.LogWarning("Response evaluated as unsatisfactory for RunId: {RunId}. Re-planning needed (mocked).", pipelineExecutionState.RunId);
-            // TODO: Implement re-planning logic / loop back to CPP
-            return Result.Fail<string>("Response unsatisfactory, re-planning needed (mocked).");
+            var memorygram = new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: llmResponse,
+                Type: MemorygramType.AssistantResponse,
+                VectorEmbedding: embeddingResult.Value,
+                Source: "LLM_Response",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow
+            );
+
+            var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
+
+            if (memorygramResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to create memorygram from LLM response: {Errors}", memorygramResult.Errors);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully created memorygram from LLM response with ID: {MemorygramId}", memorygramResult.Value.Id);
+            }
         }
+
+        return Result.Ok(llmResponse);
     }
 }

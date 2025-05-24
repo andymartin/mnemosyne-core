@@ -4,6 +4,8 @@ using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Services;
 using Moq;
+using System;
+using System.Threading.Tasks;
 
 namespace MemoryCore.Tests.UnitTests.Services;
 
@@ -35,6 +37,8 @@ public class MemorygramServiceTests
             "Test content",
             MemorygramType.Chat,
             Array.Empty<float>(),
+            "Test", // Added Source
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
@@ -50,7 +54,9 @@ public class MemorygramServiceTests
             .Setup(r => r.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(m =>
                 m.Id == memorygram.Id &&
                 m.Content == memorygram.Content &&
-                m.VectorEmbedding == embedding)))
+                m.VectorEmbedding == embedding &&
+                m.Source == memorygram.Source && // Added Source assertion
+                m.Timestamp == memorygram.Timestamp))) // Added Timestamp assertion
             .ReturnsAsync(Result.Ok(expectedMemorygram));
 
         // Act
@@ -81,6 +87,8 @@ public class MemorygramServiceTests
             "Test content",
             MemorygramType.Chat,
             Array.Empty<float>(),
+            "Test", // Added Source
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
