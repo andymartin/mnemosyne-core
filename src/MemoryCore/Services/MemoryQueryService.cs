@@ -99,4 +99,115 @@ public class MemoryQueryService : IMemoryQueryService
             return Result.Fail(new Error($"Message executing memory query: {ex.Message}"));
         }
     }
+
+    /// <summary>
+    /// Retrieves chat history for a specific chat ID
+    /// </summary>
+    /// <param name="chatId">The chat ID to retrieve history for</param>
+    /// <returns>A result containing the chat history memorygrams</returns>
+    public async Task<Result<List<Memorygram>>> GetChatHistoryAsync(string chatId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(chatId))
+            {
+                return Result.Fail(new Error("Chat ID cannot be empty"));
+            }
+
+            _logger.LogInformation("Retrieving chat history for chat ID: {ChatId}", chatId);
+
+            // Get memorygrams by chat ID from repository
+            var result = await _memorygramRepository.GetByChatIdAsync(chatId);
+            
+            if (result.IsFailed)
+            {
+                string errorMessage = string.Join(", ", result.Errors.Select(e => e.Message));
+                _logger.LogError("Failed to retrieve chat history: {ErrorMessage}", errorMessage);
+                return Result.Fail(new Error($"Failed to retrieve chat history: {errorMessage}"));
+            }
+
+            var memorygrams = result.Value.ToList();
+            _logger.LogInformation("Retrieved {Count} memorygrams for chat {ChatId}", memorygrams.Count, chatId);
+
+            return Result.Ok(memorygrams);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving chat history for chat ID: {ChatId}", chatId);
+            return Result.Fail(new Error($"Error retrieving chat history: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Queries memory for similar memorygrams using text similarity
+    /// </summary>
+    /// <param name="queryText">The text to find similar memorygrams for</param>
+    /// <param name="topK">Number of top results to return (default: 5)</param>
+    /// <returns>A result containing similar memorygrams</returns>
+    public async Task<Result<List<Memorygram>>> QueryMemoryAsync(string queryText, int topK = 5)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(queryText))
+            {
+                return Result.Fail(new Error("Query text cannot be empty"));
+            }
+
+            if (topK <= 0)
+            {
+                return Result.Fail(new Error("TopK must be greater than 0"));
+            }
+
+            _logger.LogInformation("Querying memory for similar content to: {QueryText}", queryText);
+
+            // Get embedding for query text
+            Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(queryText);
+
+            if (embeddingResult.IsFailed)
+            {
+                string errorMessage = string.Join(", ", embeddingResult.Errors.Select(e => e.Message));
+                _logger.LogError("Failed to get embedding for memory query: {ErrorMessage}", errorMessage);
+                return Result.Fail(new Error($"Failed to get embedding: {errorMessage}"));
+            }
+
+            float[] queryVector = embeddingResult.Value;
+
+            // Find similar memorygrams
+            Result<IEnumerable<MemorygramWithScore>> similarResult =
+                await _memorygramRepository.FindSimilarAsync(queryVector, topK);
+
+            if (similarResult.IsFailed)
+            {
+                string errorMessage = string.Join(", ", similarResult.Errors.Select(e => e.Message));
+                _logger.LogError("Failed to find similar memorygrams: {ErrorMessage}", errorMessage);
+                return Result.Fail(new Error($"Failed to find similar memorygrams: {errorMessage}"));
+            }
+
+            // Convert to memorygrams list
+            var memorygrams = similarResult.Value
+                .Select(m => new Memorygram(
+                    m.Id,
+                    m.Content,
+                    m.Type,
+                    m.VectorEmbedding,
+                    m.Source,
+                    m.Timestamp,
+                    m.CreatedAt,
+                    m.UpdatedAt,
+                    m.ChatId,
+                    m.PreviousMemorygramId,
+                    m.NextMemorygramId,
+                    m.Sequence))
+                .ToList();
+
+            _logger.LogInformation("Memory query returned {Count} similar memorygrams", memorygrams.Count);
+
+            return Result.Ok(memorygrams);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing memory query for text: {QueryText}", queryText);
+            return Result.Fail(new Error($"Error executing memory query: {ex.Message}"));
+        }
+    }
 }

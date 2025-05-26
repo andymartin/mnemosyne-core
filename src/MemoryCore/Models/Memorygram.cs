@@ -10,5 +10,9 @@ public record Memorygram(
     string Source,
     long Timestamp,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt
+    DateTimeOffset UpdatedAt,
+    string? ChatId = null,
+    Guid? PreviousMemorygramId = null,
+    Guid? NextMemorygramId = null,
+    int? Sequence = null
 );

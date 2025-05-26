@@ -41,8 +41,15 @@ public class MemoryQueryServiceTests
                 Guid.NewGuid(),
                 "Test content",
                 MemorygramType.Chat,
+                new float[] { 0.1f, 0.2f, 0.3f },
+                "TestSource",
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
+                "testChatId",
+                null,
+                null,
+                null,
                 0.95f)
         };
 
@@ -82,8 +89,15 @@ public class MemoryQueryServiceTests
                 Guid.NewGuid(),
                 "Test content",
                 MemorygramType.Chat,
+                new float[] { 0.1f, 0.2f, 0.3f },
+                "TestSource",
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
+                "testChatId",
+                null,
+                null,
+                null,
                 0.95f)
         };
 

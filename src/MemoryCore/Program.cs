@@ -161,6 +161,13 @@ public partial class Program
         builder.Services.AddSingleton<IMemoryQueryService, MemoryQueryService>();
         builder.Services.AddSingleton<IQueryMemoryTool, QueryMemoryTool>();
 
+        // Add AWF services
+        builder.Services.AddSingleton<IResponsePlanner, ResponsePlanner>();
+        builder.Services.AddSingleton<IReflectiveResponder, ReflectiveResponder>();
+        builder.Services.AddSingleton<IAgenticWorkflowService, AgenticWorkflowService>();
+        builder.Services.AddSingleton<ICognitiveProcessingService, MockCognitiveProcessingService>();
+        builder.Services.AddSingleton<IChatService, ChatService>();
+
         // Configure PipelineStorageOptions
         builder.Services.Configure<PipelineStorageOptions>(
             builder.Configuration.GetSection(PipelineStorageOptions.SectionName));

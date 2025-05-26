@@ -4,5 +4,6 @@ public enum MemorygramType
 {
     Invalid,
     Chat,
+    UserMessage,
     AssistantResponse
 }
