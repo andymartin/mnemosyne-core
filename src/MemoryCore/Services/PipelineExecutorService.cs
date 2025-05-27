@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using FluentResults;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models.Pipelines;
+using System.Collections.Generic;
 
 namespace Mnemosyne.Core.Services;
 
@@ -26,13 +27,28 @@ public class PipelineExecutorService : IPipelineExecutorService
     {
         _logger.LogInformation("Attempting to execute pipeline ID: {PipelineId}", pipelineId);
 
-        var manifestResult = await _pipelinesRepository.GetPipelineAsync(pipelineId);
-        if (manifestResult.IsFailed)
+        PipelineManifest manifest;
+        if (pipelineId == Guid.Empty)
         {
-            _logger.LogWarning("Execution failed: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", pipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
-            return Result.Fail<PipelineExecutionState>(manifestResult.Errors);
+            _logger.LogInformation("Executing empty pipeline for ID: {PipelineId}", pipelineId);
+            manifest = new PipelineManifest
+            {
+                Id = Guid.Empty,
+                Name = "Empty Pipeline",
+                Description = "This is an empty pipeline executed when no specific pipeline ID is provided.",
+                Components = new List<ComponentConfiguration>() // Empty list of components
+            };
         }
-        var manifest = manifestResult.Value;
+        else
+        {
+            var manifestResult = await _pipelinesRepository.GetPipelineAsync(pipelineId);
+            if (manifestResult.IsFailed)
+            {
+                _logger.LogWarning("Execution failed: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", pipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
+                return Result.Fail<PipelineExecutionState>(manifestResult.Errors);
+            }
+            manifest = manifestResult.Value;
+        }
         var runId = Guid.NewGuid(); // Consider if RunId should come from request or be generated here.
 
         var status = new PipelineExecutionStatus

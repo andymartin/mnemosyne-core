@@ -48,6 +48,9 @@ public class ResponderService : IResponderService
     {
         _logger.LogInformation("ResponderService received request. UserInput: {UserInput}", request.UserInput);
 
+        // 1. Persist user input memory (BEFORE pipeline execution)
+        await PersistUserInputMemory(request);
+
         // Handle nullable pipeline ID
         PipelineManifest manifest;
         Guid actualPipelineId;
@@ -80,16 +83,8 @@ public class ResponderService : IResponderService
             _logger.LogInformation("Using empty pipeline (no pipeline ID provided)");
         }
 
-        var state = new PipelineExecutionState
-        {
-            RunId = Guid.NewGuid(),
-            PipelineId = actualPipelineId,
-            Request = request,
-            History = new List<PipelineStageHistory>()
-        };
-
-        // 1. Memory Retrieval (BEFORE pipeline execution)
-        await EnhanceContextWithMemories(request);
+        // 1. Add chat history to request metadata (NOT associative memories - those come from pipeline stages)
+        await AddChatHistoryToRequest(request);
 
         // 2. Execute pipeline (includes AgenticWorkflowStage)
         var executionResult = await _pipelineExecutorService.ExecutePipelineAsync(actualPipelineId, request);
@@ -160,28 +155,55 @@ public class ResponderService : IResponderService
         return Result.Ok(responseResult);
     }
     
-    private async Task EnhanceContextWithMemories(PipelineExecutionRequest request)
+    private async Task AddChatHistoryToRequest(PipelineExecutionRequest request)
     {
         var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
         
         if (!string.IsNullOrEmpty(chatId))
         {
-            // Get conversation history
+            // Get conversation history and add to request metadata
             var historyResult = await _memoryQueryService.GetChatHistoryAsync(chatId);
             if (historyResult.IsSuccess)
             {
                 request.SessionMetadata["conversationHistory"] = historyResult.Value;
             }
-            
-            // Get associative memories
-            var associativeResult = await _memoryQueryService.QueryMemoryAsync(request.UserInput);
-            if (associativeResult.IsSuccess)
-            {
-                request.SessionMetadata["associativeMemories"] = associativeResult.Value;
-            }
         }
     }
     
+    private async Task PersistUserInputMemory(PipelineExecutionRequest request)
+    {
+        var embeddingResult = await _embeddingService.GetEmbeddingAsync(request.UserInput);
+        if (embeddingResult.IsSuccess)
+        {
+            var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
+            var memorygram = new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: request.UserInput,
+                Type: MemorygramType.UserInput,
+                VectorEmbedding: embeddingResult.Value,
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                ChatId: chatId
+            );
+            
+            var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
+            if (memorygramResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to create memorygram from user input: {Errors}", memorygramResult.Errors);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully created memorygram from user input with ID: {MemorygramId}", memorygramResult.Value.Id);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Failed to generate embedding for user input: {Errors}", embeddingResult.Errors);
+        }
+    }
+
     private async Task PersistResponseMemory(string response, PipelineExecutionRequest request)
     {
         var embeddingResult = await _embeddingService.GetEmbeddingAsync(response);
