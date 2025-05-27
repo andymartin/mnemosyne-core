@@ -40,7 +40,7 @@ public class MemoryQueryServiceTests
             new MemorygramWithScore(
                 Guid.NewGuid(),
                 "Test content",
-                MemorygramType.Chat,
+                MemorygramType.UserInput,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 "TestSource",
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
@@ -88,7 +88,7 @@ public class MemoryQueryServiceTests
             new MemorygramWithScore(
                 Guid.NewGuid(),
                 "Test content",
-                MemorygramType.Chat,
+                MemorygramType.UserInput,
                 new float[] { 0.1f, 0.2f, 0.3f },
                 "TestSource",
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),

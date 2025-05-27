@@ -15,5 +15,5 @@ public class UpdateMemorygramRequest
     /// <summary>
     /// The type of memorygram
     /// </summary>
-    public MemorygramType Type { get; set; } = MemorygramType.Chat;
+    public MemorygramType Type { get; set; } = MemorygramType.Invalid;
 }

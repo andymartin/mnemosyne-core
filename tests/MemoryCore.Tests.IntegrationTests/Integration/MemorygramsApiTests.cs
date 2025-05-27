@@ -68,7 +68,7 @@ public class MemorygramsApiTests
         var request = new CreateMemorygramRequest
         {
             Content = "Test API create content",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -97,7 +97,7 @@ public class MemorygramsApiTests
         var createRequest = new CreateMemorygramRequest
         {
             Content = "Test API get content",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -140,7 +140,7 @@ public class MemorygramsApiTests
         var request = new CreateMemorygramRequest
         {
             Content = "",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -158,7 +158,7 @@ public class MemorygramsApiTests
         var createRequest = new CreateMemorygramRequest
         {
             Content = "Test API patch content",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -168,7 +168,7 @@ public class MemorygramsApiTests
         var patchRequest = new UpdateMemorygramRequest
         {
             Content = "Updated via PATCH",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -196,7 +196,7 @@ public class MemorygramsApiTests
         var patchRequest = new UpdateMemorygramRequest
         {
             Content = "This won't be updated",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -214,7 +214,7 @@ public class MemorygramsApiTests
         var sourceCreateRequest = new CreateMemorygramRequest
         {
             Content = "Source memorygram for association",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
@@ -224,7 +224,7 @@ public class MemorygramsApiTests
         var targetCreateRequest = new CreateMemorygramRequest
         {
             Content = "Target memorygram for association",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
         var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
         var targetId = targetMemorygram.Id;
@@ -258,7 +258,7 @@ public class MemorygramsApiTests
         var targetCreateRequest = new CreateMemorygramRequest
         {
             Content = "Target memorygram for association",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var targetMemorygram = await CreateMemorygramAndDeserializeAsync(targetCreateRequest);
@@ -286,7 +286,7 @@ public class MemorygramsApiTests
         var sourceCreateRequest = new CreateMemorygramRequest
         {
             Content = "Source memorygram for association",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var sourceMemorygram = await CreateMemorygramAndDeserializeAsync(sourceCreateRequest);
@@ -314,7 +314,7 @@ public class MemorygramsApiTests
         var createRequest = new CreateMemorygramRequest
         {
             Content = "Test API update content",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -324,7 +324,7 @@ public class MemorygramsApiTests
         var updateRequest = new UpdateMemorygramRequest
         {
             Content = "Updated via PUT",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -352,7 +352,7 @@ public class MemorygramsApiTests
         var updateRequest = new UpdateMemorygramRequest
         {
             Content = "This won't be updated",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -379,7 +379,7 @@ public class MemorygramsApiTests
         var updateRequest = new UpdateMemorygramRequest
         {
             Content = "",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act
@@ -397,7 +397,7 @@ public class MemorygramsApiTests
         var createRequest = new CreateMemorygramRequest
         {
             Content = "Test API update content",
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         var createdMemorygram = await CreateMemorygramAndDeserializeAsync(createRequest);
@@ -421,7 +421,7 @@ public class MemorygramsApiTests
         var request = new CreateMemorygramRequest
         {
             Content = maxContent,
-            Type = MemorygramType.Chat
+            Type = MemorygramType.UserInput
         };
 
         // Act

@@ -35,7 +35,7 @@ public class MemorygramServiceTests
         var memorygram = new Memorygram(
             Guid.NewGuid(),
             "Test content",
-            MemorygramType.Chat,
+            MemorygramType.UserInput,
             Array.Empty<float>(),
             "Test", // Added Source
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp
@@ -85,7 +85,7 @@ public class MemorygramServiceTests
         var memorygram = new Memorygram(
             Guid.NewGuid(),
             "Test content",
-            MemorygramType.Chat,
+            MemorygramType.UserInput,
             Array.Empty<float>(),
             "Test", // Added Source
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp

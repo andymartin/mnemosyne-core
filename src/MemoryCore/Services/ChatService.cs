@@ -34,7 +34,7 @@ public class ChatService : IChatService
             var userMemorygram = new Memorygram(
                 Id: Guid.NewGuid(),
                 Content: userText,
-                Type: MemorygramType.UserMessage,
+                Type: MemorygramType.UserInput,
                 VectorEmbedding: Array.Empty<float>(),
                 Source: "Chat",
                 Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),

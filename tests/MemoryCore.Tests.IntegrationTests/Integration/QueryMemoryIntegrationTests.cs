@@ -217,7 +217,7 @@ public class QueryMemoryIntegrationTests : IDisposable
             var memorygram = new Memorygram(
                 Guid.NewGuid(),
                 content,
-                MemorygramType.Chat,
+                MemorygramType.UserInput,
                 embeddingResult.Value,
                 "IntegrationTest",
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
