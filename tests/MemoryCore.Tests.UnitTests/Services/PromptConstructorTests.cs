@@ -96,7 +96,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var messages = result.Value.Messages;
+        var messages = result.Value.Request.Messages;
         
         var conversationMessages = messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
         conversationMessages.Count.ShouldBe(4);
@@ -133,7 +133,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var userMessages = result.Value.Messages.Where(m => m.Role == "user").ToList();
+        var userMessages = result.Value.Request.Messages.Where(m => m.Role == "user").ToList();
         userMessages.Count.ShouldBe(1);
         userMessages[0].Content.ShouldBe("Hello, how are you?");
     }
@@ -157,7 +157,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var assistantMessages = result.Value.Messages.Where(m => m.Role == "assistant").ToList();
+        var assistantMessages = result.Value.Request.Messages.Where(m => m.Role == "assistant").ToList();
         assistantMessages.Count.ShouldBe(1);
         assistantMessages[0].Content.ShouldBe("I'm doing well, thank you!");
     }
@@ -192,7 +192,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var systemMessages = result.Value.Messages.Where(m => m.Role == "system").ToList();
+        var systemMessages = result.Value.Request.Messages.Where(m => m.Role == "system").ToList();
         systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
         
         var systemMessage = systemMessages.First();
@@ -224,7 +224,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var systemMessages = result.Value.Messages.Where(m => m.Role == "system").ToList();
+        var systemMessages = result.Value.Request.Messages.Where(m => m.Role == "system").ToList();
         systemMessages.Count.ShouldBe(1);
         
         var systemMessage = systemMessages.First();
@@ -272,7 +272,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var systemMessage = result.Value.Messages.Where(m => m.Role == "system").First();
+        var systemMessage = result.Value.Request.Messages.Where(m => m.Role == "system").First();
         
         systemMessage.Content.ShouldContain("Associated Memories:");
         
@@ -307,7 +307,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var systemMessages = result.Value.Messages.Where(m => m.Role == "system").ToList();
+        var systemMessages = result.Value.Request.Messages.Where(m => m.Role == "system").ToList();
         systemMessages.Count.ShouldBeGreaterThan(0);
         
         var mainSystemMessage = systemMessages.FirstOrDefault(m => m.Content.Contains("You are Nemo"));
@@ -333,9 +333,9 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Model.ShouldBe("test-model");
-        result.Value.Temperature.ShouldBe(0.7f);
-        result.Value.MaxTokens.ShouldBeNull();
+        result.Value.Request.Model.ShouldBe("test-model");
+        result.Value.Request.Temperature.ShouldBe(0.7f);
+        result.Value.Request.MaxTokens.ShouldBeNull();
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var messages = result.Value.Messages;
+        var messages = result.Value.Request.Messages;
         
         var systemMessages = messages.Where(m => m.Role == "system").ToList();
         systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
@@ -442,7 +442,7 @@ public class PromptConstructorTests
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
-        var conversationMessages = result.Value.Messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
+        var conversationMessages = result.Value.Request.Messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
         conversationMessages.Count.ShouldBe(5);
         
         conversationMessages[0].Role.ShouldBe("user");

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models.Client;
 
 namespace Mnemosyne.Core.Controllers;
 
@@ -29,8 +30,20 @@ public class ChatHub : Hub
             if (result.IsSuccess)
             {
                 _logger.LogInformation("Message processed successfully for chat {ChatId}", chatId);
+                
+                // Create AssistantMessageDto with recalled memory system prompt
+                var assistantMessageDto = new AssistantMessageDto
+                {
+                    MessageId = Guid.NewGuid().ToString(),
+                    ConversationId = chatId,
+                    Content = result.Value.Response,
+                    IsComplete = true,
+                    Timestamp = DateTime.UtcNow,
+                    RecalledMemorySystemPrompt = result.Value.SystemPrompt
+                };
+                
                 // Send the assistant's response back to the client
-                await Clients.Caller.SendAsync("ReceiveMessage", "assistant", result.Value);
+                await Clients.Caller.SendAsync("ReceiveMessage", assistantMessageDto);
             }
             else
             {

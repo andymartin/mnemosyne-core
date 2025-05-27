@@ -67,8 +67,13 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(manifest));
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(pipelineId, request))
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
+        var promptConstructionResult = new PromptConstructionResult
+        {
+            Request = chatCompletionRequest,
+            SystemPrompt = "Test system prompt with memories"
+        };
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Ok(chatCompletionRequest));
+            .Returns(Result.Ok(promptConstructionResult));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
@@ -83,7 +88,8 @@ public class ResponderServiceTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(llmResponse);
+        result.Value.Response.ShouldBe(llmResponse);
+        result.Value.SystemPrompt.ShouldBe("Test system prompt with memories");
 
         _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(pipelineId), Times.Once);
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(pipelineId, request), Times.Once);
@@ -166,7 +172,7 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(pipelineId, request))
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Fail<ChatCompletionRequest>(errorMessage));
+            .Returns(Result.Fail<PromptConstructionResult>(errorMessage));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -200,7 +206,7 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(pipelineId, request))
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Ok(chatCompletionRequest));
+            .Returns(Result.Ok(new PromptConstructionResult { Request = chatCompletionRequest, SystemPrompt = "Test system prompt" }));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Fail<string>(errorMessage));
 
@@ -237,7 +243,7 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(pipelineId, request))
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Ok(chatCompletionRequest));
+            .Returns(Result.Ok(new PromptConstructionResult { Request = chatCompletionRequest, SystemPrompt = "Test system prompt" }));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
@@ -252,7 +258,7 @@ public class ResponderServiceTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(llmResponse);
+        result.Value.Response.ShouldBe(llmResponse);
 
         _mockLogger.Verify(
             x => x.Log(
@@ -285,7 +291,7 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(pipelineId, request))
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Ok(chatCompletionRequest));
+            .Returns(Result.Ok(new PromptConstructionResult { Request = chatCompletionRequest, SystemPrompt = "Test system prompt" }));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
@@ -300,7 +306,7 @@ public class ResponderServiceTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(llmResponse);
+        result.Value.Response.ShouldBe(llmResponse);
 
         _mockLogger.Verify(
             x => x.Log(

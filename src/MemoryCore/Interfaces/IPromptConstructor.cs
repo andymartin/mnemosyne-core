@@ -6,5 +6,5 @@ namespace Mnemosyne.Core.Interfaces;
 
 public interface IPromptConstructor
 {
-    Result<ChatCompletionRequest> ConstructPrompt(PipelineExecutionState state);
+    Result<PromptConstructionResult> ConstructPrompt(PipelineExecutionState state);
 }

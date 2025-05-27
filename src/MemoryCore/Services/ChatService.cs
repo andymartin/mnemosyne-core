@@ -24,7 +24,7 @@ public class ChatService : IChatService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<string>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null)
+    public async Task<Result<ResponseResult>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null)
     {
         try
         {
@@ -49,7 +49,7 @@ public class ChatService : IChatService
             {
                 _logger.LogError("Failed to store user message for chat {ChatId}: {Errors}",
                     chatId, string.Join(", ", userMemorygramResult.Errors.Select(e => e.Message)));
-                return Result.Fail<string>("Failed to store user message: " +
+                return Result.Fail<ResponseResult>("Failed to store user message: " +
                     string.Join(", ", userMemorygramResult.Errors.Select(e => e.Message)));
             }
 
@@ -75,7 +75,7 @@ public class ChatService : IChatService
             {
                 _logger.LogError("Failed to process message with ResponderService for chat {ChatId}: {Errors}",
                     chatId, string.Join(", ", responseResult.Errors.Select(e => e.Message)));
-                return Result.Fail<string>("Failed to process message with ResponderService: " +
+                return Result.Fail<ResponseResult>("Failed to process message with ResponderService: " +
                     string.Join(", ", responseResult.Errors.Select(e => e.Message)));
             }
 
@@ -84,7 +84,7 @@ public class ChatService : IChatService
             // 4. Store assistant response memorygram with proper chain linking
             var assistantMemorygram = new Memorygram(
                 Id: Guid.NewGuid(),
-                Content: responseResult.Value,
+                Content: responseResult.Value.Response,
                 Type: MemorygramType.AssistantResponse,
                 VectorEmbedding: Array.Empty<float>(), // Will be populated by MemorygramService
                 Source: "ResponderService",
@@ -101,7 +101,7 @@ public class ChatService : IChatService
             {
                 _logger.LogError("Failed to store assistant response for chat {ChatId}: {Errors}",
                     chatId, string.Join(", ", assistantMemorygramResult.Errors.Select(e => e.Message)));
-                return Result.Fail<string>("Failed to store assistant response: " +
+                return Result.Fail<ResponseResult>("Failed to store assistant response: " +
                     string.Join(", ", assistantMemorygramResult.Errors.Select(e => e.Message)));
             }
 

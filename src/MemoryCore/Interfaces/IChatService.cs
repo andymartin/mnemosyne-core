@@ -1,8 +1,9 @@
 using FluentResults;
+using Mnemosyne.Core.Models;
 
 namespace Mnemosyne.Core.Interfaces;
 
 public interface IChatService
 {
-    Task<Result<string>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null);
+    Task<Result<ResponseResult>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null);
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Mnemosyne.Core.Controllers;
 using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 using Moq;
 
 namespace MemoryCore.Tests.UnitTests.Controllers;
@@ -40,9 +41,14 @@ public class ChatHubControllerTests
         var userText = "testMessage";
 
         // Setup the ChatService to return a successful result
+        var responseResult = new ResponseResult
+        {
+            Response = "Mock response",
+            SystemPrompt = "Test system prompt"
+        };
         _mockChatService
             .Setup(x => x.ProcessUserMessageAsync(chatId, userText, It.IsAny<Guid?>()))
-            .ReturnsAsync(FluentResults.Result.Ok("Mock response"));
+            .ReturnsAsync(FluentResults.Result.Ok(responseResult));
 
         // Just verify that the method doesn't throw an exception
         // The SignalR Hub context makes it difficult to test the full flow in unit tests

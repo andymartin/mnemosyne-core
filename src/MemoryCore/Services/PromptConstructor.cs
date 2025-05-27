@@ -41,11 +41,11 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         _logger = logger;
     }
 
-    public Result<ChatCompletionRequest> ConstructPrompt(PipelineExecutionState state)
+    public Result<PromptConstructionResult> ConstructPrompt(PipelineExecutionState state)
     {
         if (state?.Context == null || !state.Context.Any())
         {
-            return Result.Fail<ChatCompletionRequest>("Pipeline execution state contains no context to construct a prompt.");
+            return Result.Fail<PromptConstructionResult>("Pipeline execution state contains no context to construct a prompt.");
         }
 
         var messages = new List<ChatMessage>();
@@ -63,7 +63,7 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         
         if (!messages.Any())
         {
-            return Result.Fail<ChatCompletionRequest>("Constructed prompt has no messages after truncation.");
+            return Result.Fail<PromptConstructionResult>("Constructed prompt has no messages after truncation.");
         }
         
         var completionRequest = new ChatCompletionRequest
@@ -74,7 +74,15 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
             Temperature = 0.7f
         };
 
-        return Result.Ok(completionRequest);
+        var systemPrompt = messages.FirstOrDefault(m => m.Role == "system")?.Content ?? string.Empty;
+
+        var result = new PromptConstructionResult
+        {
+            Request = completionRequest,
+            SystemPrompt = systemPrompt
+        };
+
+        return Result.Ok(result);
     }
     
     private void ProcessContextIntoMessages(List<ContextChunk> contextChunks, List<ChatMessage> messages)

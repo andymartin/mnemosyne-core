@@ -44,7 +44,7 @@ public class ResponderService : IResponderService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<string>> ProcessRequestAsync(PipelineExecutionRequest request)
+    public async Task<Result<ResponseResult>> ProcessRequestAsync(PipelineExecutionRequest request)
     {
         _logger.LogInformation("ResponderService received request. UserInput: {UserInput}", request.UserInput);
 
@@ -61,7 +61,7 @@ public class ResponderService : IResponderService
             {
                 _logger.LogError("Failed to retrieve pipeline manifest for ID {PipelineId}: {Errors}",
                     actualPipelineId, getManifestResult.Errors);
-                return Result.Fail<string>($"Failed to retrieve pipeline manifest: {getManifestResult.Errors.First().Message}");
+                return Result.Fail<ResponseResult>($"Failed to retrieve pipeline manifest: {getManifestResult.Errors.First().Message}");
             }
             manifest = getManifestResult.Value;
             _logger.LogInformation("Retrieved pipeline manifest: {PipelineName}", manifest.Name);
@@ -97,7 +97,7 @@ public class ResponderService : IResponderService
         if (executionResult.IsFailed)
         {
             _logger.LogError("Pipeline execution failed: {Errors}", executionResult.Errors);
-            return Result.Fail<string>($"Pipeline execution failed: {executionResult.Errors.First().Message}");
+            return Result.Fail<ResponseResult>($"Pipeline execution failed: {executionResult.Errors.First().Message}");
         }
 
         var finalState = executionResult.Value;
@@ -108,10 +108,12 @@ public class ResponderService : IResponderService
         if (promptResult.IsFailed)
         {
             _logger.LogError("Failed to construct prompt: {Errors}", promptResult.Errors);
-            return Result.Fail<string>($"Failed to construct prompt: {promptResult.Errors.First().Message}");
+            return Result.Fail<ResponseResult>($"Failed to construct prompt: {promptResult.Errors.First().Message}");
         }
 
-        var chatCompletionRequest = promptResult.Value;
+        var promptConstructionResult = promptResult.Value;
+        var chatCompletionRequest = promptConstructionResult.Request;
+        var systemPrompt = promptConstructionResult.SystemPrompt;
         _logger.LogInformation("Constructed chat completion request with {MessageCount} messages.", chatCompletionRequest.Messages.Count);
 
         // 4. Call LLM
@@ -119,7 +121,7 @@ public class ResponderService : IResponderService
         if (llmResponseResult.IsFailed)
         {
             _logger.LogError("Failed to generate LLM completion: {Errors}", llmResponseResult.Errors);
-            return Result.Fail<string>($"Failed to generate LLM completion: {llmResponseResult.Errors.First().Message}");
+            return Result.Fail<ResponseResult>($"Failed to generate LLM completion: {llmResponseResult.Errors.First().Message}");
         }
 
         var llmResponse = llmResponseResult.Value;
@@ -149,7 +151,13 @@ public class ResponderService : IResponderService
         // 7. Memory Persistence (AFTER response dispatch)
         await PersistResponseMemory(llmResponse, request);
 
-        return Result.Ok(llmResponse);
+        var responseResult = new ResponseResult
+        {
+            Response = llmResponse,
+            SystemPrompt = systemPrompt
+        };
+
+        return Result.Ok(responseResult);
     }
     
     private async Task EnhanceContextWithMemories(PipelineExecutionRequest request)
