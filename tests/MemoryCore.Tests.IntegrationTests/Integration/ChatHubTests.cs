@@ -40,7 +40,7 @@ public class ChatHubTests : IClassFixture<ChatHubFixture>
             .Build();
 
         var messageReceived = false;
-        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        hubConnection.On<object>("ReceiveMessage", (messageDto) =>
         {
             messageReceived = true;
         });
