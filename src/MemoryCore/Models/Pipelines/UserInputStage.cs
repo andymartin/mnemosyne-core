@@ -28,7 +28,11 @@ public class UserInputStage : PipelineStage
         {
             Type = ContextChunkType.UserInput,
             Content = state.Request.UserInput,
-            Provenance = Name
+            Provenance = new ContextProvenance
+            {
+                Source = Name,
+                Timestamp = DateTimeOffset.Now
+            }
         });
 
         return Task.FromResult(state);

@@ -100,7 +100,7 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         
         var conversationChunks = userInputChunks
             .Concat(assistantResponseChunks)
-            .OrderBy(c => c.Provenance)
+            .OrderBy(c => c.Provenance.Timestamp)
             .ToList();
             
         foreach (var chunk in conversationChunks)

@@ -11,7 +11,11 @@ public class NullPipelineStage : PipelineStage
         state.Context.Add(new ContextChunk
         {
             Type = ContextChunkType.Simulation,
-            Provenance = "NullPipelineStage",
+            Provenance = new ContextProvenance
+            {
+                Source = "NullPipelineStage",
+                Timestamp = DateTimeOffset.Now
+            },
             Content = "Simulated stage completed"
         });
 

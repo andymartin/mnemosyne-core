@@ -19,7 +19,11 @@ public class PipelineStageTests
             state.Context.Add(new ContextChunk
             {
                 Type = ContextChunkType.UserInput,
-                Provenance = "TestPipelineStage",
+                Provenance = new ContextProvenance
+                {
+                    Source = "TestPipelineStage",
+                    Timestamp = DateTimeOffset.Now
+                },
                 Content = "Test component executed"
             });
 
@@ -72,7 +76,7 @@ public class PipelineStageTests
         result.ShouldBeSameAs(state);
         result.Context.ShouldNotBeEmpty();
         result.Context.Last().Type.ShouldBe(ContextChunkType.UserInput);
-        result.Context.Last().Provenance.ShouldBe("TestPipelineStage");
+        result.Context.Last().Provenance.Source.ShouldBe("TestPipelineStage");
         result.Context.Last().Content.ShouldBe("Test component executed");
     }
 
@@ -116,7 +120,7 @@ public class PipelineStageTests
         result.ShouldBeSameAs(state);
         result.Context.ShouldNotBeEmpty();
         result.Context.Last().Type.ShouldBe(ContextChunkType.Simulation);
-        result.Context.Last().Provenance.ShouldBe("NullPipelineStage");
+        result.Context.Last().Provenance.Source.ShouldBe("NullPipelineStage");
         result.Context.Last().Content.ShouldBe("Simulated stage completed");
         status.CurrentStageName.ShouldBe(nameof(NullPipelineStage));
     }
