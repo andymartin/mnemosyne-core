@@ -163,8 +163,9 @@ public class PromptConstructorTests
     }
 
     [Fact]
-    public void ConstructPrompt_WithMemoryContextChunk_ShouldAddAsSystemMessage()
+    public void ConstructPrompt_WithMemoryContextChunk_ShouldAppendToSystemPrompt()
     {
+        var testTimestamp = new DateTimeOffset(2025, 5, 27, 16, 30, 0, TimeSpan.Zero);
         var state = new PipelineExecutionState
         {
             Context = new List<ContextChunk>
@@ -173,13 +174,17 @@ public class PromptConstructorTests
                 {
                     Type = ContextChunkType.Memory,
                     Content = "User likes coffee",
-                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
+                    Provenance = new ContextProvenance
+                    {
+                        Timestamp = testTimestamp,
+                        Source = "User Note: preferences"
+                    }
                 },
                 new ContextChunk
                 {
                     Type = ContextChunkType.UserInput,
                     Content = "Hello",
-                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now.AddMinutes(1) }
+                    Provenance = new ContextProvenance { Timestamp = testTimestamp.AddMinutes(1) }
                 }
             }
         };
@@ -188,11 +193,99 @@ public class PromptConstructorTests
 
         result.IsSuccess.ShouldBeTrue();
         var systemMessages = result.Value.Messages.Where(m => m.Role == "system").ToList();
-        systemMessages.Count.ShouldBe(2); // One for system prompt, one for memory
+        systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
         
-        var memorySystemMessage = systemMessages.FirstOrDefault(m => m.Content.Contains("Relevant memories"));
-        memorySystemMessage.ShouldNotBeNull();
-        memorySystemMessage.Content.ShouldContain("User likes coffee");
+        var systemMessage = systemMessages.First();
+        systemMessage.Content.ShouldContain("You are Nemo");
+        systemMessage.Content.ShouldContain("Associated Memories:");
+        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T16:30:00Z");
+        systemMessage.Content.ShouldContain("**Type:** Memory");
+        systemMessage.Content.ShouldContain("**Source:** User Note: preferences");
+        systemMessage.Content.ShouldContain("**Content:**");
+        systemMessage.Content.ShouldContain("User likes coffee");
+    }
+
+    [Fact]
+    public void ConstructPrompt_WithoutMemoryChunks_ShouldOnlyHaveDefaultSystemPrompt()
+    {
+        var state = new PipelineExecutionState
+        {
+            Context = new List<ContextChunk>
+            {
+                new ContextChunk
+                {
+                    Type = ContextChunkType.UserInput,
+                    Content = "Hello",
+                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
+                }
+            }
+        };
+
+        var result = _service.ConstructPrompt(state);
+
+        result.IsSuccess.ShouldBeTrue();
+        var systemMessages = result.Value.Messages.Where(m => m.Role == "system").ToList();
+        systemMessages.Count.ShouldBe(1);
+        
+        var systemMessage = systemMessages.First();
+        systemMessage.Content.ShouldContain("You are Nemo");
+        systemMessage.Content.ShouldNotContain("Associated Memories:");
+    }
+
+    [Fact]
+    public void ConstructPrompt_WithMultipleMemoryChunks_ShouldFormatAllMemories()
+    {
+        var baseTime = new DateTimeOffset(2025, 5, 27, 10, 0, 0, TimeSpan.Zero);
+        var state = new PipelineExecutionState
+        {
+            Context = new List<ContextChunk>
+            {
+                new ContextChunk
+                {
+                    Type = ContextChunkType.Memory,
+                    Content = "User prefers morning meetings",
+                    Provenance = new ContextProvenance
+                    {
+                        Timestamp = baseTime,
+                        Source = "Meeting Transcript: weekly_standup"
+                    }
+                },
+                new ContextChunk
+                {
+                    Type = ContextChunkType.Memory,
+                    Content = "Project Alpha budget approved",
+                    Provenance = new ContextProvenance
+                    {
+                        Timestamp = baseTime.AddHours(2),
+                        Source = "Consolidated Memory: project_decisions"
+                    }
+                },
+                new ContextChunk
+                {
+                    Type = ContextChunkType.UserInput,
+                    Content = "What's the status on Project Alpha?",
+                    Provenance = new ContextProvenance { Timestamp = baseTime.AddHours(4) }
+                }
+            }
+        };
+
+        var result = _service.ConstructPrompt(state);
+
+        result.IsSuccess.ShouldBeTrue();
+        var systemMessage = result.Value.Messages.Where(m => m.Role == "system").First();
+        
+        systemMessage.Content.ShouldContain("Associated Memories:");
+        
+        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T10:00:00Z");
+        systemMessage.Content.ShouldContain("**Source:** Meeting Transcript: weekly_standup");
+        systemMessage.Content.ShouldContain("User prefers morning meetings");
+        
+        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T12:00:00Z");
+        systemMessage.Content.ShouldContain("**Source:** Consolidated Memory: project_decisions");
+        systemMessage.Content.ShouldContain("Project Alpha budget approved");
+        
+        var memoryCount = systemMessage.Content.Split("**Timestamp:**").Length - 1;
+        memoryCount.ShouldBe(2);
     }
 
     [Fact]
@@ -286,7 +379,12 @@ public class PromptConstructorTests
         var messages = result.Value.Messages;
         
         var systemMessages = messages.Where(m => m.Role == "system").ToList();
-        systemMessages.Count.ShouldBe(2); // Main system prompt + memory
+        systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
+        
+        var systemMessage = systemMessages.First();
+        systemMessage.Content.ShouldContain("You are Nemo");
+        systemMessage.Content.ShouldContain("Associated Memories:");
+        systemMessage.Content.ShouldContain("User prefers formal communication");
         
         var conversationMessages = messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
         conversationMessages.Count.ShouldBe(2); // User input + assistant response

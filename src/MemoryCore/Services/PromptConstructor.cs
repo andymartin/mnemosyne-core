@@ -83,20 +83,28 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         var userInputChunks = contextChunks.Where(c => c.Type == ContextChunkType.UserInput).ToList();
         var assistantResponseChunks = contextChunks.Where(c => c.Type == ContextChunkType.AssistantResponse).ToList();
         
+        var systemPromptBuilder = new StringBuilder(SystemPrompt);
+        
         if (memoryChunks.Any())
         {
-            var memoryContent = new StringBuilder("Relevant memories:\n");
+            systemPromptBuilder.AppendLine();
+            systemPromptBuilder.AppendLine("---");
+            systemPromptBuilder.AppendLine("Associated Memories:");
+            systemPromptBuilder.AppendLine("---");
+            
             foreach (var chunk in memoryChunks)
             {
-                memoryContent.AppendLine(chunk.Content);
+                systemPromptBuilder.AppendLine($"**Timestamp:** {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ}");
+                systemPromptBuilder.AppendLine($"**Type:** {chunk.Type}");
+                systemPromptBuilder.AppendLine($"**Source:** {chunk.Provenance.Source}");
+                systemPromptBuilder.AppendLine("**Content:**");
+                systemPromptBuilder.AppendLine(chunk.Content);
+                systemPromptBuilder.AppendLine();
+                systemPromptBuilder.AppendLine("---");
             }
-            
-            messages.Add(new ChatMessage
-            {
-                Role = "system",
-                Content = memoryContent.ToString()
-            });
         }
+        
+        messages[0].Content = systemPromptBuilder.ToString();
         
         var conversationChunks = userInputChunks
             .Concat(assistantResponseChunks)
