@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Mnemosyne.Core.Models;
 using System.Text.Json;
+using System.Linq;
 
 namespace Mnemosyne.Core.Services;
 
@@ -108,9 +109,20 @@ public class SecureConfigurationService : ISecureConfigurationService
         var secretsResult = LoadSecretsFile();
         if (secretsResult.IsSuccess && secretsResult.Value != null)
         {
+            // Try exact match first
             if (secretsResult.Value.TryGetValue($"{providerName}ApiKey", out var secretApiKey))
             {
                 return Result.Ok(secretApiKey.ToString() ?? string.Empty);
+            }
+            
+            // Try case-insensitive match
+            var keyToFind = $"{providerName}ApiKey";
+            var matchingKey = secretsResult.Value.Keys.FirstOrDefault(k =>
+                string.Equals(k, keyToFind, StringComparison.OrdinalIgnoreCase));
+            
+            if (matchingKey != null && secretsResult.Value.TryGetValue(matchingKey, out var caseInsensitiveApiKey))
+            {
+                return Result.Ok(caseInsensitiveApiKey.ToString() ?? string.Empty);
             }
         }
 

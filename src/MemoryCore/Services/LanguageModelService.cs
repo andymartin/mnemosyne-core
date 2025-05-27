@@ -67,26 +67,37 @@ public class LanguageModelService : ILanguageModelService
                 request.Model = config.ModelName;
             }
             
-            // Set the API endpoint
-            _httpClient.BaseAddress = new Uri(config.Url);
-            
-            // Add authorization header
-            if (!string.IsNullOrEmpty(config.ApiKey))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", config.ApiKey);
-            }
-            
             // Serialize the request
             var requestJson = JsonSerializer.Serialize(request, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
             
+            // Create the full URL
+            var baseUrl = config.Url.TrimEnd('/');
+            var fullUrl = $"{baseUrl}/v1/chat/completions";
+            
+            // Create the request message with headers
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, fullUrl);
+            requestMessage.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+            
+            // Add authorization header
+            if (!string.IsNullOrEmpty(config.ApiKey))
+            {
+                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey);
+            }
+            
+            // Add any additional headers from configuration
+            if (config.AdditionalHeaders != null)
+            {
+                foreach (var header in config.AdditionalHeaders)
+                {
+                    requestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
+            
             // Send the request
-            var response = await _httpClient.PostAsync(
-                "v1/chat/completions",
-                new StringContent(requestJson, Encoding.UTF8, "application/json"));
+            var response = await _httpClient.SendAsync(requestMessage);
             
             // Check for success
             if (!response.IsSuccessStatusCode)
