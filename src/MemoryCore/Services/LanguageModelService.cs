@@ -33,23 +33,32 @@ public class LanguageModelService : ILanguageModelService
         ChatCompletionRequest request,
         LanguageModelType modelType = LanguageModelType.Master)
     {
+        // Convert enum to string for backward compatibility
+        var modelName = modelType.ToString();
+        return await GenerateCompletionAsync(request, modelName);
+    }
+
+    public async Task<Result<string>> GenerateCompletionAsync(
+        ChatCompletionRequest request,
+        string modelName)
+    {
         try
         {
             LanguageModelConfiguration config;
             
             try
             {
-                config = _options.Value.GetConfiguration(modelType);
+                config = _options.Value.GetConfiguration(modelName);
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex, "Language model type {ModelType} not configured", modelType);
-                return Result.Fail<string>($"Language model type {modelType} not configured");
+                _logger.LogError(ex, "Language model {ModelName} not configured", modelName);
+                return Result.Fail<string>($"Language model {modelName} not configured");
             }
             
             if (string.IsNullOrEmpty(config.Url))
             {
-                return Result.Fail<string>($"Language model URL for {modelType} is not configured.");
+                return Result.Fail<string>($"Language model URL for {modelName} is not configured.");
             }
 
             // Override the model name if specified in the config

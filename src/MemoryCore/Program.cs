@@ -85,9 +85,34 @@ public partial class Program
             return Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(options.TimeoutSeconds));
         });
 
-        // Configure LanguageModel options
-        builder.Services.Configure<LanguageModelOptions>(
-            builder.Configuration.GetSection("LanguageModels"));
+        // Register SecureConfigurationService
+        builder.Services.AddSingleton<ISecureConfigurationService, SecureConfigurationService>();
+        
+        // Configure LanguageModel options using SecureConfigurationService
+        builder.Services.AddSingleton<LanguageModelOptions>(serviceProvider =>
+        {
+            var secureConfigService = serviceProvider.GetRequiredService<ISecureConfigurationService>();
+            var configResult = secureConfigService.LoadLanguageModelConfiguration();
+            
+            if (configResult.IsFailed)
+            {
+                var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+                logger.LogError("Failed to load language model configuration: {Errors}",
+                    string.Join(", ", configResult.Errors.Select(e => e.Message)));
+                
+                // Return default configuration as fallback
+                return new LanguageModelOptions();
+            }
+            
+            return configResult.Value;
+        });
+        
+        // Also configure as IOptions<LanguageModelOptions> for backward compatibility
+        builder.Services.AddSingleton<IOptions<LanguageModelOptions>>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<LanguageModelOptions>();
+            return Options.Create(options);
+        });
 
         // Configure HttpClient for Language Model Service with resilience policies
         builder.Services.AddHttpClient<ILanguageModelService, LanguageModelService>((serviceProvider, client) =>

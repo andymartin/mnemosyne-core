@@ -11,12 +11,15 @@ COPY . ./
 RUN dotnet publish -c Release -o out
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build-env /app/out .
 
 # Expose port 80 for the application
 EXPOSE 80
+
+# Set environment variable to use port 80
+ENV ASPNETCORE_URLS=http://+:80
 
 # Set the entry point to run the application
 ENTRYPOINT ["dotnet", "Mnemosyne.Core.dll"]

@@ -1,0 +1,95 @@
+{
+  "LanguageModels": {
+    "Master": {
+      "Name": "Master Role - Primary LLM",
+      "Provider": "OpenAI",
+      "Url": "https://api.openai.com",
+      "ApiKey": "your-openai-api-key-here",
+      "MaxTokens": 4096,
+      "ModelName": "gpt-4",
+      "Enabled": true,
+      "AdditionalHeaders": {
+        "User-Agent": "Mnemosyne-Core/1.0"
+      },
+      "ProviderSpecificSettings": {
+        "temperature": "0.7",
+        "top_p": "1.0"
+      }
+    },
+    "Auxiliary": {
+      "Name": "Auxiliary Role - Secondary LLM",
+      "Provider": "OpenRouter",
+      "Url": "https://openrouter.ai/api/v1",
+      "ApiKey": "your-openrouter-api-key-here",
+      "MaxTokens": 4096,
+      "ModelName": "anthropic/claude-3-sonnet",
+      "Enabled": true,
+      "AdditionalHeaders": {
+        "HTTP-Referer": "https://your-site.com",
+        "X-Title": "Mnemosyne Core"
+      },
+      "ProviderSpecificSettings": {
+        "temperature": "0.7"
+      }
+    },
+    "Evaluator": {
+      "Name": "Evaluator Role - Quality Assessment",
+      "Provider": "Anthropic",
+      "Url": "https://api.anthropic.com",
+      "ApiKey": "your-anthropic-api-key-here",
+      "MaxTokens": 4096,
+      "ModelName": "claude-3-haiku-20240307",
+      "Enabled": false,
+      "AdditionalHeaders": {
+        "anthropic-version": "2023-06-01"
+      },
+      "ProviderSpecificSettings": {
+        "temperature": "0.3"
+      }
+    },
+    "Creative": {
+      "Name": "Creative Role - Content Generation",
+      "Provider": "OpenRouter",
+      "Url": "https://openrouter.ai/api/v1",
+      "ApiKey": "your-openrouter-api-key-here",
+      "MaxTokens": 8192,
+      "ModelName": "openai/gpt-4-turbo",
+      "Enabled": false,
+      "AdditionalHeaders": {
+        "HTTP-Referer": "https://your-site.com",
+        "X-Title": "Mnemosyne Core"
+      },
+      "ProviderSpecificSettings": {
+        "temperature": "0.9",
+        "top_p": "0.95"
+      }
+    },
+    "LocalFast": {
+      "Name": "Local Fast Role - Quick Processing",
+      "Provider": "Ollama",
+      "Url": "http://localhost:11434",
+      "ApiKey": "",
+      "MaxTokens": 4096,
+      "ModelName": "llama2:7b",
+      "Enabled": false,
+      "AdditionalHeaders": {},
+      "ProviderSpecificSettings": {
+        "temperature": "0.7",
+        "num_predict": "4096"
+      }
+    },
+    "LocalPowerful": {
+      "Name": "Local Powerful Role - Complex Tasks",
+      "Provider": "LmStudio",
+      "Url": "http://localhost:1234",
+      "ApiKey": "lm-studio",
+      "MaxTokens": 8192,
+      "ModelName": "local-70b-model",
+      "Enabled": false,
+      "AdditionalHeaders": {},
+      "ProviderSpecificSettings": {
+        "temperature": "0.5"
+      }
+    }
+  }
+}

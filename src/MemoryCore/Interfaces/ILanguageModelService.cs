@@ -9,4 +9,8 @@ public interface ILanguageModelService
     Task<Result<string>> GenerateCompletionAsync(
         ChatCompletionRequest request,
         LanguageModelType modelType = LanguageModelType.Master);
+    
+    Task<Result<string>> GenerateCompletionAsync(
+        ChatCompletionRequest request,
+        string modelName);
 }
