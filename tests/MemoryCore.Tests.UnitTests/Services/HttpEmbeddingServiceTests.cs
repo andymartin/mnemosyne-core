@@ -20,7 +20,7 @@ public class HttpEmbeddingServiceTests
         _handlerMock = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_handlerMock.Object)
         {
-            BaseAddress = new Uri("http://test-embedding-service.com")
+            BaseAddress = new Uri("http://test-mnemosyne-embed.com")
         };
         _service = new HttpEmbeddingService(_httpClient, _loggerMock.Object);
     }

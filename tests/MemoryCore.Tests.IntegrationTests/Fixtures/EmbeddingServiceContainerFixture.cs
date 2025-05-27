@@ -12,7 +12,7 @@ public class EmbeddingServiceContainerFixture : IAsyncLifetime
     {
         _container = new ContainerBuilder()
             .WithImage("mnemosyne-embed:latest")
-            .WithName($"embedding-service-test-{Guid.NewGuid().ToString("N").Substring(0, 8)}")
+            .WithName($"mnemosyne-embed-test-{Guid.NewGuid().ToString("N").Substring(0, 8)}")
             .WithPortBinding(8000, true)
             .WithExposedPort(8000)
             .WithWaitStrategy(

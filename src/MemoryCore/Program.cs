@@ -39,6 +39,18 @@ public partial class Program
 
         builder.Services.AddSignalR();
 
+        // Add CORS
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.WithOrigins("http://localhost:3000")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            });
+        });
+
         // Configure Neo4j driver
         builder.Services.AddSingleton<IDriver>(sp =>
         {
@@ -265,6 +277,7 @@ public partial class Program
         }
 
         app.UseHttpsRedirection();
+        app.UseCors("AllowFrontend");
         app.UseAuthorization();
         app.UseWebSockets();
         app.MapControllers();
