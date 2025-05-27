@@ -219,6 +219,8 @@ public class QueryMemoryIntegrationTests : IDisposable
                 content,
                 MemorygramType.Chat,
                 embeddingResult.Value,
+                "IntegrationTest",
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow
             );

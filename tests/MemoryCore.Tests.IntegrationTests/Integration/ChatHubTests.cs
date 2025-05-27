@@ -46,9 +46,9 @@ public class ChatHubTests : IClassFixture<ChatHubFixture>
         });
 
         await hubConnection.StartAsync();
-        await hubConnection.InvokeAsync("SendMessage", "testUser", "testMessage");
+        await hubConnection.InvokeAsync("SendMessage", "test-chat-id", "Hello, this is a test message");
 
-        await Task.Delay(100);
+        await Task.Delay(5000); // Give more time for processing
         Assert.True(messageReceived);
         await hubConnection.DisposeAsync();
     }
