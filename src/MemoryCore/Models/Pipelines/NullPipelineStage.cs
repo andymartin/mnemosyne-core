@@ -10,7 +10,7 @@ public class NullPipelineStage : PipelineStage
         // Add to context instead of creating a new result
         state.Context.Add(new ContextChunk
         {
-            Type = "Simulation",
+            Type = ContextChunkType.Simulation,
             Provenance = "NullPipelineStage",
             Content = "Simulated stage completed"
         });

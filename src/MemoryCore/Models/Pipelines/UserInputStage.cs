@@ -26,7 +26,7 @@ public class UserInputStage : PipelineStage
 
         state.Context.Add(new ContextChunk
         {
-            Type = "UserInput",
+            Type = ContextChunkType.UserInput,
             Content = state.Request.UserInput,
             Provenance = Name
         });

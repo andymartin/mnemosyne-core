@@ -79,9 +79,9 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
     
     private void ProcessContextIntoMessages(List<ContextChunk> contextChunks, List<ChatMessage> messages)
     {
-        var memoryChunks = contextChunks.Where(c => c.Type == "Memory").ToList();
-        var userInputChunks = contextChunks.Where(c => c.Type == "UserInput").ToList();
-        var assistantResponseChunks = contextChunks.Where(c => c.Type == "AssistantResponse").ToList();
+        var memoryChunks = contextChunks.Where(c => c.Type == ContextChunkType.Memory).ToList();
+        var userInputChunks = contextChunks.Where(c => c.Type == ContextChunkType.UserInput).ToList();
+        var assistantResponseChunks = contextChunks.Where(c => c.Type == ContextChunkType.AssistantResponse).ToList();
         
         if (memoryChunks.Any())
         {
@@ -105,7 +105,7 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
             
         foreach (var chunk in conversationChunks)
         {
-            string role = chunk.Type == "UserInput" ? "user" : "assistant";
+            string role = chunk.Type == ContextChunkType.UserInput ? "user" : "assistant";
             messages.Add(new ChatMessage
             {
                 Role = role,
@@ -115,7 +115,7 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         
         if (!userInputChunks.Any())
         {
-            var userInput = contextChunks.FirstOrDefault(c => c.Type == "UserInput")?.Content;
+            var userInput = contextChunks.FirstOrDefault(c => c.Type == ContextChunkType.UserInput)?.Content;
             
             if (!string.IsNullOrEmpty(userInput))
             {

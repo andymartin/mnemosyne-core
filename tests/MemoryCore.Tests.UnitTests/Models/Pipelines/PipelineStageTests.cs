@@ -18,7 +18,7 @@ public class PipelineStageTests
             // Add test information to context
             state.Context.Add(new ContextChunk
             {
-                Type = "Test",
+                Type = ContextChunkType.UserInput,
                 Provenance = "TestPipelineStage",
                 Content = "Test component executed"
             });
@@ -71,7 +71,7 @@ public class PipelineStageTests
         result.ShouldNotBeNull();
         result.ShouldBeSameAs(state);
         result.Context.ShouldNotBeEmpty();
-        result.Context.Last().Type.ShouldBe("Test");
+        result.Context.Last().Type.ShouldBe(ContextChunkType.UserInput);
         result.Context.Last().Provenance.ShouldBe("TestPipelineStage");
         result.Context.Last().Content.ShouldBe("Test component executed");
     }
@@ -115,7 +115,7 @@ public class PipelineStageTests
         result.ShouldNotBeNull();
         result.ShouldBeSameAs(state);
         result.Context.ShouldNotBeEmpty();
-        result.Context.Last().Type.ShouldBe("Simulation");
+        result.Context.Last().Type.ShouldBe(ContextChunkType.Simulation);
         result.Context.Last().Provenance.ShouldBe("NullPipelineStage");
         result.Context.Last().Content.ShouldBe("Simulated stage completed");
         status.CurrentStageName.ShouldBe(nameof(NullPipelineStage));
