@@ -202,7 +202,7 @@ public partial class Program
         builder.Services.AddSingleton<IResponsePlanner, ResponsePlanner>();
         builder.Services.AddSingleton<IReflectiveResponder, ReflectiveResponder>();
         builder.Services.AddSingleton<IAgenticWorkflowService, AgenticWorkflowService>();
-        builder.Services.AddSingleton<ICognitiveProcessingService, MockCognitiveProcessingService>();
+        builder.Services.AddSingleton<ICognitiveProcessingService, CognitiveProcessingService>();
         builder.Services.AddSingleton<IChatService, ChatService>();
 
         // Configure PipelineStorageOptions
