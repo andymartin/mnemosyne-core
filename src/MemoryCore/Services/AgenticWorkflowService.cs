@@ -43,57 +43,20 @@ public class AgenticWorkflowService : IAgenticWorkflowService
 
             var context = contextResult.Value;
 
-            // 2. Reflective Responder: Evaluate context
-            var evaluationResult = await _reflectiveResponder.EvaluateContextAsync(context);
-
-            if (evaluationResult.IsFailed)
+            // TODO: This service will be deleted in Phase 6 - temporarily disabled
+            _logger.LogWarning("AgenticWorkflowService is deprecated and will be removed");
+            
+            // Return a placeholder result
+            var placeholderResult = new AWFProcessingResult
             {
-                _logger.LogError("Failed to evaluate context for chat {ChatId}: {Errors}", 
-                    chatId, string.Join(", ", evaluationResult.Errors.Select(e => e.Message)));
-                return Result.Fail<AWFProcessingResult>(evaluationResult.Errors);
-            }
-
-            if (!evaluationResult.Value.ShouldProceedToCpp)
-            {
-                _logger.LogWarning("Context evaluation determined processing should not proceed for chat {ChatId}", chatId);
-                return Result.Fail<AWFProcessingResult>("Context evaluation determined processing should not proceed.");
-            }
-
-            // 3. Reflective Responder: Process with CPP
-            var processingResult = await _reflectiveResponder.ProcessWithCppAsync(context);
-
-            if (processingResult.IsFailed)
-            {
-                _logger.LogError("Failed to process with CPP for chat {ChatId}: {Errors}", 
-                    chatId, string.Join(", ", processingResult.Errors.Select(e => e.Message)));
-                return Result.Fail<AWFProcessingResult>(processingResult.Errors);
-            }
-
-            // 4. Reflective Responder: Perform post-response analysis
-            var reflectionResult = await _reflectiveResponder.PerformPostResponseAnalysisAsync(
-                userText, 
-                processingResult.Value.AssistantResponseText,
-                processingResult.Value.UtilizedMemoryIds);
-
-            if (reflectionResult.IsFailed)
-            {
-                _logger.LogError("Failed to perform post-response analysis for chat {ChatId}: {Errors}", 
-                    chatId, string.Join(", ", reflectionResult.Errors.Select(e => e.Message)));
-                return Result.Fail<AWFProcessingResult>(reflectionResult.Errors);
-            }
-
-            // 5. Return result to calling service (Chat Service) for persistence
-            var awfResult = new AWFProcessingResult
-            {
-                AssistantResponseText = processingResult.Value.AssistantResponseText,
-                ReflectionData = reflectionResult.Value,
-                UtilizedMemoryIds = processingResult.Value.UtilizedMemoryIds
+                AssistantResponseText = "Placeholder response - AgenticWorkflowService deprecated",
+                UtilizedMemoryIds = new List<Guid>()
             };
 
-            _logger.LogInformation("AWF processing completed successfully for chat {ChatId}, response length: {ResponseLength}", 
-                chatId, awfResult.AssistantResponseText.Length);
+            _logger.LogInformation("AWF processing completed successfully for chat {ChatId}, response length: {ResponseLength}",
+                chatId, placeholderResult.AssistantResponseText.Length);
 
-            return Result.Ok(awfResult);
+            return Result.Ok(placeholderResult);
         }
         catch (Exception ex)
         {

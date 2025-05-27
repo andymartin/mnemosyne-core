@@ -19,6 +19,8 @@ public class ResponderServiceTests
     private readonly Mock<IPipelinesRepository> _mockPipelinesRepository;
     private readonly Mock<IPromptConstructor> _mockPromptConstructor;
     private readonly Mock<ILanguageModelService> _mockLanguageModelService;
+    private readonly Mock<IReflectiveResponder> _mockReflectiveResponder;
+    private readonly Mock<IMemoryQueryService> _mockMemoryQueryService;
     private readonly Mock<IMemorygramService> _mockMemorygramService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<ILogger<ResponderService>> _mockLogger;
@@ -30,6 +32,8 @@ public class ResponderServiceTests
         _mockPipelinesRepository = new Mock<IPipelinesRepository>();
         _mockPromptConstructor = new Mock<IPromptConstructor>();
         _mockLanguageModelService = new Mock<ILanguageModelService>();
+        _mockReflectiveResponder = new Mock<IReflectiveResponder>();
+        _mockMemoryQueryService = new Mock<IMemoryQueryService>();
         _mockMemorygramService = new Mock<IMemorygramService>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockLogger = new Mock<ILogger<ResponderService>>();
@@ -38,6 +42,8 @@ public class ResponderServiceTests
             _mockPipelinesRepository.Object,
             _mockPromptConstructor.Object,
             _mockLanguageModelService.Object,
+            _mockReflectiveResponder.Object,
+            _mockMemoryQueryService.Object,
             _mockMemorygramService.Object,
             _mockEmbeddingService.Object,
             _mockLogger.Object
@@ -65,6 +71,8 @@ public class ResponderServiceTests
             .Returns(Result.Ok(chatCompletionRequest));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
+        _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
+            .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
         _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
             .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
@@ -232,6 +240,8 @@ public class ResponderServiceTests
             .Returns(Result.Ok(chatCompletionRequest));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
+        _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
+            .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
         _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
             .ReturnsAsync(Result.Fail<float[]>(embeddingErrorMessage));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
@@ -248,7 +258,7 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to generate embedding for LLM response")),
+                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to generate embedding for response")),
                 It.IsAny<Exception?>(),
                 (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
             Times.Once);
@@ -278,6 +288,8 @@ public class ResponderServiceTests
             .Returns(Result.Ok(chatCompletionRequest));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Ok(llmResponse));
+        _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
+            .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
         _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
             .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
@@ -294,7 +306,7 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to create memorygram from LLM response")),
+                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to create memorygram from response")),
                 It.IsAny<Exception?>(),
                 (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
             Times.Once);

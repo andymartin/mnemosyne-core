@@ -221,6 +221,7 @@ public partial class Program
 
         // Register Pipeline Stages
         builder.Services.AddTransient<UserInputStage>();
+        builder.Services.AddTransient<AgenticWorkflowStage>();
         builder.Services.AddSingleton<IPipelineExecutorService, PipelineExecutorService>(); // Register PipelineExecutorService
         builder.Services.AddSingleton<IPromptConstructor, PromptConstructor>(); // Register PromptConstructor
         builder.Services.AddSingleton<IResponderService, ResponderService>(); // Register ResponderService

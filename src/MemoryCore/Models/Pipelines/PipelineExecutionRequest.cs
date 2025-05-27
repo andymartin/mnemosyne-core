@@ -12,7 +12,7 @@ public class PipelineExecutionRequest
     /// <summary>
     /// Gets or sets the ID of the pipeline to be executed.
     /// </summary>
-    public Guid PipelineId { get; set; }
+    public Guid? PipelineId { get; set; }
 
     /// <summary>
     /// Gets or sets the primary user input for the pipeline.

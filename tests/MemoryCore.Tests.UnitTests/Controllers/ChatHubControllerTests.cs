@@ -41,7 +41,7 @@ public class ChatHubControllerTests
 
         // Setup the ChatService to return a successful result
         _mockChatService
-            .Setup(x => x.ProcessUserMessageAsync(chatId, userText))
+            .Setup(x => x.ProcessUserMessageAsync(chatId, userText, It.IsAny<Guid?>()))
             .ReturnsAsync(FluentResults.Result.Ok("Mock response"));
 
         // Just verify that the method doesn't throw an exception
