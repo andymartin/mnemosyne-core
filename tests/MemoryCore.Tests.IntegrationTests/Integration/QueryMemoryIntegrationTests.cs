@@ -18,19 +18,19 @@ public class QueryMemoryIntegrationTests : IDisposable
     private readonly IServiceProvider _scopedServiceProvider;
     private readonly IMemoryQueryService _memoryQueryService;
     private readonly Neo4jContainerFixture _neo4jFixture;
-    private readonly EmbeddingServiceContainerFixture _embeddingFixture;
+    // private readonly EmbeddingServiceContainerFixture _embeddingFixture; // Embedding service is now mocked
 
     public QueryMemoryIntegrationTests(
         ITestOutputHelper output,
-        Neo4jContainerFixture neo4jFixture,
-        EmbeddingServiceContainerFixture embeddingFixture)
+        Neo4jContainerFixture neo4jFixture)
+        // EmbeddingServiceContainerFixture embeddingFixture) // Embedding service is now mocked
     {
         _output = output;
         _neo4jFixture = neo4jFixture;
-        _embeddingFixture = embeddingFixture;
+        // _embeddingFixture = embeddingFixture; // Embedding service is now mocked
 
         // Create a factory that uses the fixtures
-        _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
+        _factory = new CustomWebApplicationFactory(neo4jFixture); // Removed embeddingFixture
         _client = _factory.CreateClient();
 
         // Create a scope to resolve scoped services

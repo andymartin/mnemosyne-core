@@ -187,6 +187,7 @@ public partial class Program
 
         // Add repository and services
         builder.Services.AddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
+        builder.Services.AddSingleton<ISemanticReformulator, SemanticReformulator>(); // Register SemanticReformulator
         builder.Services.AddSingleton<IMemorygramService, MemorygramService>();
         builder.Services.AddSingleton<IMemoryQueryService, MemoryQueryService>();
         builder.Services.AddSingleton<IQueryMemoryTool, QueryMemoryTool>();

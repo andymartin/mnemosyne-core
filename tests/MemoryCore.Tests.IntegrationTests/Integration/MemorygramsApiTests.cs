@@ -18,20 +18,20 @@ public class MemorygramsApiTests
     private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
     private readonly Neo4jContainerFixture _neo4jFixture;
-    private readonly EmbeddingServiceContainerFixture _embeddingFixture;
+    // private readonly EmbeddingServiceContainerFixture _embeddingFixture; // Embedding service is now mocked
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ITestOutputHelper _output;
 
     public MemorygramsApiTests(
         Neo4jContainerFixture neo4jFixture,
-        EmbeddingServiceContainerFixture embeddingFixture,
+        // EmbeddingServiceContainerFixture embeddingFixture, // Embedding service is now mocked
         ITestOutputHelper output)
     {
         _neo4jFixture = neo4jFixture;
-        _embeddingFixture = embeddingFixture;
+        // _embeddingFixture = embeddingFixture; // Embedding service is now mocked
         _output = output;
 
-        _factory = new CustomWebApplicationFactory(neo4jFixture, embeddingFixture);
+        _factory = new CustomWebApplicationFactory(neo4jFixture); // Removed embeddingFixture
         _client = _factory.CreateClient();
         _jsonOptions = _factory.Services.GetRequiredService<JsonSerializerOptions>(); // Initialize from DI
     }
@@ -86,7 +86,7 @@ public class MemorygramsApiTests
 
         // Verify embeddings exist and have the correct dimension
         content.TopicalEmbedding.ShouldNotBeNull();
-        content.TopicalEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        content.TopicalEmbedding.Length.ShouldBe(1024);
         content.ContentEmbedding.ShouldNotBeNull();
         content.ContentEmbedding.Length.ShouldBe(1024);
         content.ContextEmbedding.ShouldNotBeNull();

@@ -19,7 +19,6 @@ public class ResponderService : IResponderService
     private readonly IReflectiveResponder _reflectiveResponder;
     private readonly IMemoryQueryService _memoryQueryService;
     private readonly IMemorygramService _memorygramService;
-    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<ResponderService> _logger;
 
     public ResponderService(
@@ -30,7 +29,6 @@ public class ResponderService : IResponderService
         IReflectiveResponder reflectiveResponder,
         IMemoryQueryService memoryQueryService,
         IMemorygramService memorygramService,
-        IEmbeddingService embeddingService,
         ILogger<ResponderService> logger)
     {
         _pipelineExecutorService = pipelineExecutorService ?? throw new ArgumentNullException(nameof(pipelineExecutorService));
@@ -40,7 +38,6 @@ public class ResponderService : IResponderService
         _reflectiveResponder = reflectiveResponder ?? throw new ArgumentNullException(nameof(reflectiveResponder));
         _memoryQueryService = memoryQueryService ?? throw new ArgumentNullException(nameof(memoryQueryService));
         _memorygramService = memorygramService ?? throw new ArgumentNullException(nameof(memorygramService));
-        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -193,75 +190,63 @@ public class ResponderService : IResponderService
     
     private async Task PersistUserInputMemory(PipelineExecutionRequest request)
     {
-        var embeddingResult = await _embeddingService.GetEmbeddingAsync(request.UserInput);
-        if (embeddingResult.IsSuccess)
+        string? chatIdString = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
+        Guid? chatId = !string.IsNullOrEmpty(chatIdString) && Guid.TryParse(chatIdString, out var parsedGuid) ? parsedGuid : null;
+
+        var memorygram = new Memorygram(
+            Id: Guid.NewGuid(),
+            Content: request.UserInput,
+            Type: MemorygramType.UserInput,
+            TopicalEmbedding: null,
+            ContentEmbedding: null,
+            ContextEmbedding: null,
+            MetadataEmbedding: null,
+            Source: "ResponderService",
+            Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            CreatedAt: DateTimeOffset.UtcNow,
+            UpdatedAt: DateTimeOffset.UtcNow,
+            ChatId: chatId
+        );
+
+        var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
+        if (memorygramResult.IsFailed)
         {
-            var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
-            var memorygram = new Memorygram(
-                Id: Guid.NewGuid(),
-                Content: request.UserInput,
-                Type: MemorygramType.UserInput,
-                TopicalEmbedding: embeddingResult.Value,    // Using same embedding for all types until specialized embedding generation is implemented
-                ContentEmbedding: embeddingResult.Value,
-                ContextEmbedding: embeddingResult.Value,
-                MetadataEmbedding: embeddingResult.Value,
-                Source: "ResponderService",
-                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow,
-                ChatId: chatId
-            );
-            
-            var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
-            if (memorygramResult.IsFailed)
-            {
-                _logger.LogWarning("Failed to create memorygram from user input: {Errors}", memorygramResult.Errors);
-            }
-            else
-            {
-                _logger.LogInformation("Successfully created memorygram from user input with ID: {MemorygramId}", memorygramResult.Value.Id);
-            }
+            _logger.LogWarning("Failed to create memorygram from user input: {Errors}", string.Join(", ", memorygramResult.Errors.Select(e => e.Message)));
         }
         else
         {
-            _logger.LogWarning("Failed to generate embedding for user input: {Errors}", embeddingResult.Errors);
+            _logger.LogInformation("Successfully created memorygram from user input with ID: {MemorygramId}", memorygramResult.Value.Id);
         }
     }
 
-    private async Task PersistResponseMemory(string response, PipelineExecutionRequest request)
+    private async Task PersistResponseMemory(string llmResponse, PipelineExecutionRequest request)
     {
-        var embeddingResult = await _embeddingService.GetEmbeddingAsync(response);
-        if (embeddingResult.IsSuccess)
+        string? chatIdString = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
+        Guid? chatId = !string.IsNullOrEmpty(chatIdString) && Guid.TryParse(chatIdString, out var parsedGuid) ? parsedGuid : null;
+
+        var memorygram = new Memorygram(
+            Id: Guid.NewGuid(),
+            Content: llmResponse,
+            Type: MemorygramType.AssistantResponse,
+            TopicalEmbedding: null,
+            ContentEmbedding: null,
+            ContextEmbedding: null,
+            MetadataEmbedding: null,
+            Source: "ResponderService",
+            Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            CreatedAt: DateTimeOffset.UtcNow,
+            UpdatedAt: DateTimeOffset.UtcNow,
+            ChatId: chatId
+        );
+
+        var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
+        if (memorygramResult.IsFailed)
         {
-            var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
-            var memorygram = new Memorygram(
-                Id: Guid.NewGuid(),
-                Content: response,
-                Type: MemorygramType.AssistantResponse,
-                TopicalEmbedding: embeddingResult.Value,    // Using same embedding for all types until specialized embedding generation is implemented
-                ContentEmbedding: embeddingResult.Value,
-                ContextEmbedding: embeddingResult.Value,
-                MetadataEmbedding: embeddingResult.Value,
-                Source: "ResponderService",
-                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow,
-                ChatId: chatId
-            );
-            
-            var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
-            if (memorygramResult.IsFailed)
-            {
-                _logger.LogWarning("Failed to create memorygram from response: {Errors}", memorygramResult.Errors);
-            }
-            else
-            {
-                _logger.LogInformation("Successfully created memorygram from response with ID: {MemorygramId}", memorygramResult.Value.Id);
-            }
+            _logger.LogWarning("Failed to create memorygram from LLM response: {Errors}", string.Join(", ", memorygramResult.Errors.Select(e => e.Message)));
         }
         else
         {
-            _logger.LogWarning("Failed to generate embedding for response: {Errors}", embeddingResult.Errors);
+            _logger.LogInformation("Successfully created memorygram from LLM response with ID: {MemorygramId}", memorygramResult.Value.Id);
         }
     }
 }

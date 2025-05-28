@@ -73,7 +73,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                     type = memorygram.Type.ToString(),
                     source = memorygram.Source,
                     timestamp = memorygram.Timestamp,
-                    chatId = memorygram.ChatId,
+                    chatId = memorygram.ChatId?.ToString(),
                     previousMemorygramId = memorygram.PreviousMemorygramId?.ToString(),
                     nextMemorygramId = memorygram.NextMemorygramId?.ToString(),
                     sequence = memorygram.Sequence
@@ -95,7 +95,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["m.timestamp"].As<long>(),
                         ConvertToDateTime(record["m.createdAt"]),
                         ConvertToDateTime(record["m.updatedAt"]),
-                        record["m.chatId"].As<string>(),
+                        record["m.chatId"].As<string>() != null ? Guid.Parse(record["m.chatId"].As<string>()) : null,
                         record["m.previousMemorygramId"].As<string>() != null ? Guid.Parse(record["m.previousMemorygramId"].As<string>()) : null,
                         record["m.nextMemorygramId"].As<string>() != null ? Guid.Parse(record["m.nextMemorygramId"].As<string>()) : null,
                         record["m.sequence"].As<int?>()
@@ -191,7 +191,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>(),
+                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()
@@ -243,7 +243,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>(),
+                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()
@@ -317,7 +317,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>(),
+                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>(),
@@ -379,7 +379,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>(),
+                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()

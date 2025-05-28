@@ -15,7 +15,7 @@ public record MemorygramWithScore(
     long Timestamp,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? ChatId,
+    Guid? ChatId,
     Guid? PreviousMemorygramId,
     Guid? NextMemorygramId,
     int? Sequence,

@@ -24,7 +24,6 @@ public class ResponderServiceTests
     private readonly Mock<IReflectiveResponder> _mockReflectiveResponder;
     private readonly Mock<IMemoryQueryService> _mockMemoryQueryService;
     private readonly Mock<IMemorygramService> _mockMemorygramService;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<ILogger<ResponderService>> _mockLogger;
     private readonly ResponderService _service;
 
@@ -37,7 +36,6 @@ public class ResponderServiceTests
         _mockReflectiveResponder = new Mock<IReflectiveResponder>();
         _mockMemoryQueryService = new Mock<IMemoryQueryService>();
         _mockMemorygramService = new Mock<IMemorygramService>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockLogger = new Mock<ILogger<ResponderService>>();
         _service = new ResponderService(
             _mockPipelineExecutorService.Object,
@@ -47,7 +45,6 @@ public class ResponderServiceTests
             _mockReflectiveResponder.Object,
             _mockMemoryQueryService.Object,
             _mockMemorygramService.Object,
-            _mockEmbeddingService.Object,
             _mockLogger.Object
         );
     }
@@ -59,7 +56,6 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
         var pipelineExecutionState = new PipelineExecutionState { RunId = Guid.NewGuid() };
         var chatCompletionRequest = new ChatCompletionRequest { Messages = new List<ChatMessage> { new ChatMessage { Role = "user", Content = "test" } } };
@@ -80,14 +76,8 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(llmResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
             .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
-            .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), llmResponse, MemorygramType.AssistantResponse, embedding, embedding, embedding, embedding, "LLM_Response", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), llmResponse, MemorygramType.AssistantResponse, null, null, null, null, "LLM_Response", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -101,7 +91,6 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()), Times.Once);
         _mockPromptConstructor.Verify(p => p.ConstructPrompt(pipelineExecutionState), Times.Once);
         _mockLanguageModelService.Verify(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master), Times.Once);
-        _mockEmbeddingService.Verify(e => e.GetEmbeddingAsync(llmResponse), Times.Once);
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Exactly(2));
     }
 
@@ -112,15 +101,12 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var errorMessage = "Pipeline not found";
 
         _mockPipelinesRepository.Setup(r => r.GetPipelineAsync(pipelineId))
             .ReturnsAsync(Result.Fail<PipelineManifest>(errorMessage));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -133,7 +119,6 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()), Times.Never);
         _mockPromptConstructor.Verify(p => p.ConstructPrompt(It.IsAny<PipelineExecutionState>()), Times.Never);
         _mockLanguageModelService.Verify(l => l.GenerateCompletionAsync(It.IsAny<ChatCompletionRequest>(), It.IsAny<LanguageModelType>()), Times.Never);
-        _mockEmbeddingService.Verify(e => e.GetEmbeddingAsync(userInput), Times.Once);
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Once);
     }
 
@@ -144,7 +129,6 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
         var errorMessage = "Pipeline execution error";
 
@@ -152,10 +136,8 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(manifest));
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()))
             .ReturnsAsync(Result.Fail<PipelineExecutionState>(errorMessage));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -168,7 +150,6 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()), Times.Once);
         _mockPromptConstructor.Verify(p => p.ConstructPrompt(It.IsAny<PipelineExecutionState>()), Times.Never);
         _mockLanguageModelService.Verify(l => l.GenerateCompletionAsync(It.IsAny<ChatCompletionRequest>(), It.IsAny<LanguageModelType>()), Times.Never);
-        _mockEmbeddingService.Verify(e => e.GetEmbeddingAsync(It.IsAny<string>()), Times.Once);
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Once);
     }
 
@@ -179,7 +160,6 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
         var pipelineExecutionState = new PipelineExecutionState { RunId = Guid.NewGuid() };
         var errorMessage = "Prompt construction error";
@@ -190,10 +170,8 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(pipelineExecutionState));
         _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
             .Returns(Result.Fail<PromptConstructionResult>(errorMessage));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -206,7 +184,6 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()), Times.Once);
         _mockPromptConstructor.Verify(p => p.ConstructPrompt(pipelineExecutionState), Times.Once);
         _mockLanguageModelService.Verify(l => l.GenerateCompletionAsync(It.IsAny<ChatCompletionRequest>(), It.IsAny<LanguageModelType>()), Times.Never);
-        _mockEmbeddingService.Verify(e => e.GetEmbeddingAsync(It.IsAny<string>()), Times.Once);
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Once);
     }
 
@@ -217,7 +194,6 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
         var pipelineExecutionState = new PipelineExecutionState { RunId = Guid.NewGuid() };
         var chatCompletionRequest = new ChatCompletionRequest { Messages = new List<ChatMessage> { new ChatMessage { Role = "user", Content = "test" } } };
@@ -231,10 +207,8 @@ public class ResponderServiceTests
             .Returns(Result.Ok(new PromptConstructionResult { Request = chatCompletionRequest, SystemPrompt = "Test system prompt" }));
         _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
             .ReturnsAsync(Result.Fail<string>(errorMessage));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -247,58 +221,7 @@ public class ResponderServiceTests
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()), Times.Once);
         _mockPromptConstructor.Verify(p => p.ConstructPrompt(pipelineExecutionState), Times.Once);
         _mockLanguageModelService.Verify(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master), Times.Once);
-        _mockEmbeddingService.Verify(e => e.GetEmbeddingAsync(It.IsAny<string>()), Times.Once);
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task ProcessRequestAsync_ShouldLogWarning_WhenEmbeddingServiceFails()
-    {
-        // Arrange
-        var pipelineId = Guid.NewGuid();
-        var userInput = "Test user input";
-        var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
-        var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
-        var pipelineExecutionState = new PipelineExecutionState { RunId = Guid.NewGuid() };
-        var chatCompletionRequest = new ChatCompletionRequest { Messages = new List<ChatMessage> { new ChatMessage { Role = "user", Content = "test" } } };
-        var llmResponse = "LLM generated response";
-        var embeddingErrorMessage = "Embedding service error";
-
-        _mockPipelinesRepository.Setup(r => r.GetPipelineAsync(pipelineId))
-            .ReturnsAsync(Result.Ok(manifest));
-        _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()))
-            .ReturnsAsync(Result.Ok(pipelineExecutionState));
-        _mockPromptConstructor.Setup(p => p.ConstructPrompt(pipelineExecutionState))
-            .Returns(Result.Ok(new PromptConstructionResult { Request = chatCompletionRequest, SystemPrompt = "Test system prompt" }));
-        _mockLanguageModelService.Setup(l => l.GenerateCompletionAsync(chatCompletionRequest, LanguageModelType.Master))
-            .ReturnsAsync(Result.Ok(llmResponse));
-        _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
-            .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
-            .ReturnsAsync(Result.Fail<float[]>(embeddingErrorMessage));
-        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), llmResponse, MemorygramType.AssistantResponse, Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), "LLM_Response", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
-
-        // Act
-        var result = await _service.ProcessRequestAsync(request);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.Response.ShouldBe(llmResponse);
-
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>(o => o.ToString()!.Contains("Failed to generate embedding for response")),
-                It.IsAny<Exception?>(),
-                (Func<object, Exception?, string>)It.IsAny<object>()),
-            Times.Once);
-
-        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -308,7 +231,6 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var userInput = "Test user input";
         var request = new PipelineExecutionRequest { PipelineId = pipelineId, UserInput = userInput };
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var manifest = new PipelineManifest { Id = pipelineId, Name = "Test Pipeline" };
         var pipelineExecutionState = new PipelineExecutionState { RunId = Guid.NewGuid() };
         var chatCompletionRequest = new ChatCompletionRequest { Messages = new List<ChatMessage> { new ChatMessage { Role = "user", Content = "test" } } };
@@ -325,13 +247,11 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(llmResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, llmResponse))
             .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true, EvaluationNotes = "Test evaluation", Confidence = 1.0f }));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(llmResponse))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Content == userInput))) // User input memorygram
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Content == llmResponse))) // Assistant response memorygram
             .ReturnsAsync(Result.Fail<Memorygram>(memorygramErrorMessage));
-
+        
         // Act
         var result = await _service.ProcessRequestAsync(request);
 
@@ -343,9 +263,9 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<object>(o => o.ToString()!.Contains("Failed to create memorygram from response")),
-                It.IsAny<Exception?>(),
-                (Func<object, Exception?, string>)It.IsAny<object>()),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Failed to create memorygram from LLM response")),
+                null,
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
             Times.Once);
 
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Exactly(2));
@@ -356,13 +276,13 @@ public class ResponderServiceTests
     {
         // Arrange
         var userInput = "Test user input";
-        var chatId = "test-chat-id";
+        var chatId = Guid.NewGuid();
         var pipelineId = Guid.NewGuid();
         var request = new PipelineExecutionRequest
         {
             UserInput = userInput,
             PipelineId = pipelineId,
-            SessionMetadata = new Dictionary<string, object> { { "chatId", chatId } }
+            SessionMetadata = new Dictionary<string, object> { { "chatId", chatId.ToString() } }
         };
 
         var pipeline = new PipelineManifest
@@ -373,7 +293,6 @@ public class ResponderServiceTests
             Components = new List<ComponentConfiguration>()
         };
 
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         var expectedResponse = "Test response";
         var systemPrompt = "Test system prompt";
 
@@ -384,10 +303,10 @@ public class ResponderServiceTests
                 Id: Guid.NewGuid(),
                 Content: userInput, // Same content as current request
                 Type: MemorygramType.UserInput,
-                TopicalEmbedding: embedding,
-                ContentEmbedding: embedding,
-                ContextEmbedding: embedding,
-                MetadataEmbedding: embedding,
+                TopicalEmbedding: null,
+                ContentEmbedding: null,
+                ContextEmbedding: null,
+                MetadataEmbedding: null,
                 Source: "ResponderService",
                 Timestamp: DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-1),
@@ -398,7 +317,7 @@ public class ResponderServiceTests
 
         _mockPipelinesRepository.Setup(r => r.GetPipelineAsync(pipelineId))
             .ReturnsAsync(Result.Ok(pipeline));
-        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId.ToString()))
             .ReturnsAsync(Result.Ok(existingChatHistory));
         _mockPipelineExecutorService.Setup(e => e.ExecutePipelineAsync(It.IsAny<PipelineExecutionState>()))
             .ReturnsAsync(Result.Ok(new PipelineExecutionState
@@ -431,12 +350,10 @@ public class ResponderServiceTests
             .ReturnsAsync(Result.Ok(expectedResponse));
         _mockReflectiveResponder.Setup(r => r.EvaluateResponseAsync(userInput, expectedResponse))
             .ReturnsAsync(Result.Ok(new ResponseEvaluation { ShouldDispatch = true }));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(userInput))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(expectedResponse))
-            .ReturnsAsync(Result.Ok(embedding));
-        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Content == userInput))) // User input memorygram
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Content == expectedResponse))) // Assistant response memorygram
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), expectedResponse, MemorygramType.AssistantResponse, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Act
         var result = await _service.ProcessRequestAsync(request);
@@ -454,10 +371,10 @@ public class ResponderServiceTests
     public async Task PersistResponseMemory_WithChatIdInSessionMetadata_ShouldIncludeChatIdInMemorygram()
     {
         // Arrange
-        var chatId = "test-chat-id-123";
+        var chatIdGuid = Guid.NewGuid();
+        var chatIdString = chatIdGuid.ToString();
         var response = "This is a test assistant response";
         var pipelineId = Guid.NewGuid();
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
         var request = new PipelineExecutionRequest
         {
@@ -465,17 +382,14 @@ public class ResponderServiceTests
             UserInput = "test input",
             SessionMetadata = new Dictionary<string, object>
             {
-                ["chatId"] = chatId,
+                ["chatId"] = chatIdString,
                 ["userId"] = "test-user"
             }
         };
 
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(response))
-            .ReturnsAsync(Result.Ok(embedding));
-
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, chatId)));
-
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, chatIdGuid)));
+        
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         method.ShouldNotBeNull();
@@ -487,12 +401,12 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.AssistantResponse &&
-                memorygram.ChatId == chatId &&
+                memorygram.ChatId == chatIdGuid &&
                 memorygram.Content == response &&
-                memorygram.TopicalEmbedding == embedding &&
-                memorygram.ContentEmbedding == embedding &&
-                memorygram.ContextEmbedding == embedding &&
-                memorygram.MetadataEmbedding == embedding &&
+                memorygram.TopicalEmbedding == null &&
+                memorygram.ContentEmbedding == null &&
+                memorygram.ContextEmbedding == null &&
+                memorygram.MetadataEmbedding == null &&
                 memorygram.Source == "ResponderService"
             )
         ), Times.Once);
@@ -504,7 +418,6 @@ public class ResponderServiceTests
         // Arrange
         var response = "This is a test assistant response";
         var pipelineId = Guid.NewGuid();
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
         var request = new PipelineExecutionRequest
         {
@@ -517,11 +430,8 @@ public class ResponderServiceTests
             }
         };
 
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(response))
-            .ReturnsAsync(Result.Ok(embedding));
-
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -536,10 +446,10 @@ public class ResponderServiceTests
                 memorygram.Type == MemorygramType.AssistantResponse &&
                 memorygram.ChatId == null &&
                 memorygram.Content == response &&
-                memorygram.TopicalEmbedding == embedding &&
-                memorygram.ContentEmbedding == embedding &&
-                memorygram.ContextEmbedding == embedding &&
-                memorygram.MetadataEmbedding == embedding
+                memorygram.TopicalEmbedding == null &&
+                memorygram.ContentEmbedding == null &&
+                memorygram.ContextEmbedding == null &&
+                memorygram.MetadataEmbedding == null
             )
         ), Times.Once);
     }
@@ -550,7 +460,6 @@ public class ResponderServiceTests
         // Arrange
         var response = "This is a test assistant response";
         var pipelineId = Guid.NewGuid();
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
         // Create a dictionary without the chatId key - this will result in null when GetValueOrDefault is called
         var request = new PipelineExecutionRequest
@@ -564,11 +473,8 @@ public class ResponderServiceTests
             }
         };
 
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(response))
-            .ReturnsAsync(Result.Ok(embedding));
-
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -583,62 +489,107 @@ public class ResponderServiceTests
                 memorygram.Type == MemorygramType.AssistantResponse &&
                 memorygram.ChatId == null &&
                 memorygram.Content == response &&
-                memorygram.TopicalEmbedding == embedding &&
-                memorygram.ContentEmbedding == embedding &&
-                memorygram.ContextEmbedding == embedding &&
-                memorygram.MetadataEmbedding == embedding
+                memorygram.TopicalEmbedding == null &&
+                memorygram.ContentEmbedding == null &&
+                memorygram.ContextEmbedding == null &&
+                memorygram.MetadataEmbedding == null
+            )
+        ), Times.Once);
+    }
+    
+    [Fact]
+    public async Task PersistUserInputMemory_WithChatIdInSessionMetadata_ShouldIncludeChatIdInMemorygram()
+    {
+        // Arrange
+        var chatIdGuid = Guid.NewGuid();
+        var chatIdString = chatIdGuid.ToString();
+        var userInput = "This is a test user input";
+        var pipelineId = Guid.NewGuid();
+
+        var request = new PipelineExecutionRequest
+        {
+            PipelineId = pipelineId,
+            UserInput = userInput,
+            SessionMetadata = new Dictionary<string, object>
+            {
+                ["chatId"] = chatIdString,
+                ["userId"] = "test-user-2"
+            }
+        };
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, chatIdGuid)));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("PersistUserInputMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        await (Task)method.Invoke(_service, new object[] { request })!;
+
+        // Assert
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
+            It.Is<Memorygram>(memorygram =>
+                memorygram.Type == MemorygramType.UserInput &&
+                memorygram.ChatId == chatIdGuid &&
+                memorygram.Content == userInput &&
+                memorygram.TopicalEmbedding == null &&
+                memorygram.ContentEmbedding == null &&
+                memorygram.ContextEmbedding == null &&
+                memorygram.MetadataEmbedding == null &&
+                memorygram.Source == "ResponderService"
             )
         ), Times.Once);
     }
 
     [Fact]
-    public async Task PersistResponseMemory_WhenEmbeddingServiceFails_ShouldNotCreateMemorygram()
+    public async Task PersistUserInputMemory_WithoutChatIdInSessionMetadata_ShouldCreateMemorygramWithNullChatId()
     {
         // Arrange
-        var response = "This is a test assistant response";
+        var userInput = "This is a test user input";
         var pipelineId = Guid.NewGuid();
-        var errorMessage = "Embedding generation failed";
 
         var request = new PipelineExecutionRequest
         {
             PipelineId = pipelineId,
-            UserInput = "test input",
+            UserInput = userInput,
             SessionMetadata = new Dictionary<string, object>
             {
-                ["chatId"] = "test-chat-id"
+                ["userId"] = "test-user-2"
+                // No chatId
             }
         };
 
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(response))
-            .ReturnsAsync(Result.Fail<float[]>(errorMessage));
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Use reflection to call the private method
-        var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var method = typeof(ResponderService).GetMethod("PersistUserInputMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request })!;
+        await (Task)method.Invoke(_service, new object[] { request })!;
 
         // Assert
-        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Never);
-
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>(o => o.ToString()!.Contains("Failed to generate embedding for response")),
-                It.IsAny<Exception?>(),
-                (Func<object, Exception?, string>)It.IsAny<object>()),
-            Times.Once);
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
+            It.Is<Memorygram>(memorygram =>
+                memorygram.Type == MemorygramType.UserInput &&
+                memorygram.ChatId == null && // Expect ChatId to be null
+                memorygram.Content == userInput &&
+                memorygram.TopicalEmbedding == null &&
+                memorygram.ContentEmbedding == null &&
+                memorygram.ContextEmbedding == null &&
+                memorygram.MetadataEmbedding == null
+            )
+        ), Times.Once);
     }
-
+    
     [Fact]
     public async Task PersistResponseMemory_ShouldSetCorrectMemorygramType()
     {
         // Arrange
         var response = "This is a test assistant response";
         var pipelineId = Guid.NewGuid();
-        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
         var request = new PipelineExecutionRequest
         {
@@ -647,11 +598,8 @@ public class ResponderServiceTests
             SessionMetadata = new Dictionary<string, object>()
         };
 
-        _mockEmbeddingService.Setup(e => e.GetEmbeddingAsync(response))
-            .ReturnsAsync(Result.Ok(embedding));
-
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, embedding, embedding, embedding, embedding, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, null, null, null, null, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

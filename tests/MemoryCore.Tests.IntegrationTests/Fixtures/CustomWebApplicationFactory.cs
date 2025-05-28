@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Mcp;
+using FluentResults;
 using Mnemosyne.Core.Persistence;
 using Mnemosyne.Core.Services;
 using Neo4j.Driver;
@@ -21,7 +23,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
 {
     private readonly Dictionary<string, string> _configValues = new Dictionary<string, string>();
     private readonly Neo4jContainerFixture? _neo4jFixture;
-    private readonly EmbeddingServiceContainerFixture? _embeddingFixture;
+    // private readonly EmbeddingServiceContainerFixture? _embeddingFixture; // Disabled Testcontainer for embedding
 
     public MockFileSystem FileSystem { get; }
 
@@ -31,11 +33,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
     }
 
     public CustomWebApplicationFactory(
-        Neo4jContainerFixture? neo4jFixture = null,
-        EmbeddingServiceContainerFixture? embeddingFixture = null)
+        Neo4jContainerFixture? neo4jFixture = null)
+        // EmbeddingServiceContainerFixture? embeddingFixture = null) // Disabled Testcontainer for embedding
     {
         _neo4jFixture = neo4jFixture;
-        _embeddingFixture = embeddingFixture;
+        // _embeddingFixture = embeddingFixture; // Disabled Testcontainer for embedding
         FileSystem = new MockFileSystem();
     }
 
@@ -93,24 +95,31 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
                 services.AddSingleton<IDriver>(sp => Substitute.For<IDriver>());
             }
 
+            // Mock IEmbeddingService for integration tests
+            var embedding = Enumerable.Range(0, 1024).Select(i => 0.1f + i * 0.1f).ToArray();
             services.RemoveAll<IEmbeddingService>();
-            if (_embeddingFixture != null)
+            services.AddSingleton<IEmbeddingService>(sp =>
             {
-                services.AddHttpClient<IEmbeddingService, HttpEmbeddingService>((serviceProvider, client) =>
-                {
-                    client.BaseAddress = new Uri(_embeddingFixture.GetConnectionString());
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                });
-            }
-            else
-            {
-                services.AddHttpClient<IEmbeddingService, HttpEmbeddingService>((serviceProvider, client) =>
-                {
-                    client.BaseAddress = new Uri("http://localhost");
-                    client.Timeout = TimeSpan.FromSeconds(30);
-                });
-            }
+                var mockEmbeddingService = Substitute.For<IEmbeddingService>();
+                mockEmbeddingService.GetEmbeddingAsync(Arg.Any<string>())
+                    .Returns(Task.FromResult(Result.Ok(embedding)));
+                return mockEmbeddingService;
+            });
 
+            // Ensure ILanguageModelService is registered with a mock for integration tests
+            services.RemoveAll<ILanguageModelService>();
+            services.AddSingleton<ILanguageModelService>(sp =>
+            {
+                var mockLanguageModelService = Substitute.For<ILanguageModelService>();
+                var reformulations = Enum.GetValues<MemoryReformulationType>()
+                                         .ToDictionary(
+                                             type => type.ToString(),
+                                             type => $"Mocked reform. for {type}");
+                var mockJsonResponse = JsonSerializer.Serialize(reformulations);
+                mockLanguageModelService.GenerateCompletionAsync(Arg.Any<ChatCompletionRequest>(), Arg.Any<LanguageModelType>())
+                    .Returns(Task.FromResult(Result.Ok(mockJsonResponse)));
+                return mockLanguageModelService;
+            });
 
             // Add repository and services
             services.RemoveAll<IMemorygramRepository>();
@@ -131,6 +140,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
 
             services.RemoveAll<IPipelinesService>();
             services.AddSingleton<IPipelinesService, PipelinesService>();
+
+            // Register Semantic Reformulator
+            services.RemoveAll<ISemanticReformulator>();
+            services.AddSingleton<ISemanticReformulator, SemanticReformulator>();
 
             // Configure JSON serialization to match the Program.cs configuration
             services.AddControllers()
