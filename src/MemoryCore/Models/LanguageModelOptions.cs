@@ -5,18 +5,24 @@ namespace Mnemosyne.Core.Models;
 
 public class LanguageModelOptions
 {
-    private readonly Dictionary<string, LanguageModelConfiguration> _configurations = new();
+    public Dictionary<string, LanguageModelConfiguration> Configurations { get; set; } = new();
+    public Dictionary<LanguageModelType, string> DefaultAssignments { get; set; } = new();
 
     public LanguageModelOptions()
     {
-        // Initialize with default configurations for backward compatibility
-        _configurations["Master"] = new LanguageModelConfiguration { Name = "Master" };
-        _configurations["Auxiliary"] = new LanguageModelConfiguration { Name = "Auxiliary" };
+        // Initialize default configurations for backward compatibility
+        Configurations["Master"] = new LanguageModelConfiguration { Name = "Master" };
+        Configurations["Auxiliary"] = new LanguageModelConfiguration { Name = "Auxiliary" };
+        
+        // Set default assignments
+        DefaultAssignments[LanguageModelType.Master] = "Master";
+        DefaultAssignments[LanguageModelType.Auxiliary] = "Auxiliary";
     }
 
+    // Backward compatibility methods
     public LanguageModelConfiguration GetConfiguration(string modelName)
     {
-        if (_configurations.TryGetValue(modelName, out var config))
+        if (Configurations.TryGetValue(modelName, out var config))
         {
             return config;
         }
@@ -26,27 +32,27 @@ public class LanguageModelOptions
 
     public void SetConfiguration(string modelName, LanguageModelConfiguration configuration)
     {
-        _configurations[modelName] = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        Configurations[modelName] = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public bool HasConfiguration(string modelName)
     {
-        return _configurations.ContainsKey(modelName);
+        return Configurations.ContainsKey(modelName);
     }
 
     public IEnumerable<string> GetConfiguredModelNames()
     {
-        return _configurations.Keys;
+        return Configurations.Keys;
     }
 
     public IEnumerable<LanguageModelConfiguration> GetAllConfigurations()
     {
-        return _configurations.Values;
+        return Configurations.Values;
     }
 
     public void RemoveConfiguration(string modelName)
     {
-        _configurations.Remove(modelName);
+        Configurations.Remove(modelName);
     }
 
     // Backward compatibility properties
