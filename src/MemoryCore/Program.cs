@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mnemosyne.Core.Controllers;
 using Mnemosyne.Core.Interfaces;
@@ -13,8 +14,43 @@ using Neo4j.Driver;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Timeout;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Mnemosyne.Core;
+
+public class PostConfigureProviderApiKeys : IPostConfigureOptions<ProviderApiKeyOptions>
+{
+    private readonly ISecureConfigurationService _secureConfig;
+    private readonly ILogger _logger;
+
+    public PostConfigureProviderApiKeys(ISecureConfigurationService secureConfig, Microsoft.Extensions.Logging.ILogger<Mnemosyne.Core.Program> logger)
+    {
+        _secureConfig = secureConfig;
+        _logger = logger;
+    }
+
+    public void PostConfigure(string? name, ProviderApiKeyOptions options)
+    {
+        try
+        {
+            // Load API keys for each provider
+            foreach (LlmProvider provider in Enum.GetValues(typeof(LlmProvider)))
+            {
+                var providerName = provider.ToString();
+                var apiKeyResult = _secureConfig.GetApiKey(providerName);
+                
+                if (apiKeyResult.IsSuccess)
+                {
+                    options.ApiKeys[provider] = apiKeyResult.Value;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load API keys from SecureConfigurationService");
+        }
+    }
+}
 
 public partial class Program
 {
@@ -137,8 +173,13 @@ public partial class Program
             builder.Configuration.GetSection("LanguageModels"));
             
         // Configure ProviderApiKey options
-        builder.Services.Configure<ProviderApiKeyOptions>(
-            builder.Configuration.GetSection(ProviderApiKeyOptions.SectionName));
+        builder.Services.AddSingleton<IPostConfigureOptions<ProviderApiKeyOptions>>(sp =>
+        {
+            var secureConfig = sp.GetRequiredService<ISecureConfigurationService>();
+            var logger = sp.GetRequiredService<ILogger<Program>>();
+            
+            return new PostConfigureProviderApiKeys(secureConfig, logger);
+        });
 
 
         // Add repository and services
