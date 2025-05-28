@@ -28,5 +28,5 @@ public interface IMemoryQueryService
     /// <param name="queryText">The text to find similar memorygrams for</param>
     /// <param name="topK">Number of top results to return (default: 5)</param>
     /// <returns>A result containing similar memorygrams</returns>
-    Task<Result<List<Memorygram>>> QueryMemoryAsync(string queryText, int topK = 5);
+    Task<Result<List<MemorygramWithScore>>> QueryMemoryAsync(string queryText, int topK = 5);
 }

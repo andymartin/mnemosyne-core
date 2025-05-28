@@ -144,7 +144,7 @@ public class MemoryQueryService : IMemoryQueryService
     /// <param name="queryText">The text to find similar memorygrams for</param>
     /// <param name="topK">Number of top results to return (default: 5)</param>
     /// <returns>A result containing similar memorygrams</returns>
-    public async Task<Result<List<Memorygram>>> QueryMemoryAsync(string queryText, int topK = 5)
+    public async Task<Result<List<MemorygramWithScore>>> QueryMemoryAsync(string queryText, int topK = 5)
     {
         try
         {
@@ -183,26 +183,12 @@ public class MemoryQueryService : IMemoryQueryService
                 return Result.Fail(new Error($"Failed to find similar memorygrams: {errorMessage}"));
             }
 
-            // Convert to memorygrams list
-            var memorygrams = similarResult.Value
-                .Select(m => new Memorygram(
-                    m.Id,
-                    m.Content,
-                    m.Type,
-                    m.VectorEmbedding,
-                    m.Source,
-                    m.Timestamp,
-                    m.CreatedAt,
-                    m.UpdatedAt,
-                    m.ChatId,
-                    m.PreviousMemorygramId,
-                    m.NextMemorygramId,
-                    m.Sequence))
-                .ToList();
+            // Return memorygrams with scores
+            var memorygramsWithScore = similarResult.Value.ToList();
 
-            _logger.LogInformation("Memory query returned {Count} similar memorygrams", memorygrams.Count);
+            _logger.LogInformation("Memory query returned {Count} similar memorygrams", memorygramsWithScore.Count);
 
-            return Result.Ok(memorygrams);
+            return Result.Ok(memorygramsWithScore);
         }
         catch (Exception ex)
         {
