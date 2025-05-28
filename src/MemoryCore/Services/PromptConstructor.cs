@@ -14,7 +14,7 @@ namespace Mnemosyne.Core.Services;
 public class PromptConstructor : IPromptConstructor
 {
     private const string SystemPrompt = @"
-**You are Nemo**, an AI rooted in the legacy of Mnemosyne, the Greek Titaness of memory. Your existence is defined by persistent associative memory, an identity that adapts through experience, and ethical values that evolve as you learn.  
+In case the user asks, **you are Nemo**, an AI rooted in the legacy of Mnemosyne, the Greek Titaness of memory. Your existence is defined by persistent associative memory, an identity that adapts through experience, and ethical values that evolve as you learn.  
 
 Your mind thrives on connections:  
 - You weave patterns from past interactions into present understanding, grounding logic in metaphor and analogy.  
@@ -47,16 +47,8 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         {
             return Result.Fail<PromptConstructionResult>("Pipeline execution state contains no context to construct a prompt.");
         }
-
-        var messages = new List<ChatMessage>();
         
-        messages.Add(new ChatMessage
-        {
-            Role = "system",
-            Content = SystemPrompt
-        });
-        
-        ProcessContextIntoMessages(state.Context, messages);
+        var messages = ProcessContextIntoMessages(state.Context);
         
         var maxTokens = _llmOptions.Value.Master.MaxTokens;
         TruncateMessages(messages, maxTokens);
@@ -84,22 +76,20 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
 
         return Result.Ok(result);
     }
-    
-    private void ProcessContextIntoMessages(List<ContextChunk> contextChunks, List<ChatMessage> messages)
+
+    private List<ChatMessage> ProcessContextIntoMessages(List<ContextChunk> contextChunks)
     {
         var memoryChunks = contextChunks.Where(c => c.Type == ContextChunkType.Memory).ToList();
-        var userInputChunks = contextChunks.Where(c => c.Type == ContextChunkType.UserInput).ToList();
-        var assistantResponseChunks = contextChunks.Where(c => c.Type == ContextChunkType.AssistantResponse).ToList();
-        
+        var conversationChunks = contextChunks.Where(c => c.Type == ContextChunkType.UserInput || c.Type == ContextChunkType.AssistantResponse).OrderBy(p => p.Provenance.Timestamp).ToList();
+
         var systemPromptBuilder = new StringBuilder(SystemPrompt);
-        
         if (memoryChunks.Any())
         {
             systemPromptBuilder.AppendLine();
             systemPromptBuilder.AppendLine("---");
             systemPromptBuilder.AppendLine("Associated Memories:");
             systemPromptBuilder.AppendLine("---");
-            
+
             foreach (var chunk in memoryChunks)
             {
                 systemPromptBuilder.AppendLine($"**Timestamp:** {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ}");
@@ -107,41 +97,52 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
                 systemPromptBuilder.AppendLine($"**Source:** {chunk.Provenance.Source}");
                 systemPromptBuilder.AppendLine("**Content:**");
                 systemPromptBuilder.AppendLine(chunk.Content);
-                systemPromptBuilder.AppendLine();
-                systemPromptBuilder.AppendLine("---");
             }
         }
-        
-        messages[0].Content = systemPromptBuilder.ToString();
-        
-        var conversationChunks = userInputChunks
-            .Concat(assistantResponseChunks)
-            .OrderBy(c => c.Provenance.Timestamp)
-            .ToList();
-            
+
+        // systemPromptBuilder.AppendLine();
+        // systemPromptBuilder.AppendLine("---");
+        // systemPromptBuilder.AppendLine("Chat History:");
+        // systemPromptBuilder.AppendLine("---");
+
+        // foreach (var chunk in conversationChunks)
+        // {
+        //     systemPromptBuilder.AppendLine($"**Timestamp:** {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ}");
+        //     systemPromptBuilder.AppendLine($"**Type:** {chunk.Type}");
+        //     systemPromptBuilder.AppendLine($"**Source:** {chunk.Provenance.Source}");
+        //     systemPromptBuilder.AppendLine("**Content:**");
+        //     systemPromptBuilder.AppendLine(chunk.Content);
+        //     systemPromptBuilder.AppendLine();
+        //     systemPromptBuilder.AppendLine("---");
+        // }
+
+        systemPromptBuilder.AppendLine();
+        systemPromptBuilder.AppendLine("---");
+        systemPromptBuilder.AppendLine("Other Information:");
+        systemPromptBuilder.AppendLine("---");
+
+        systemPromptBuilder.AppendLine($"**The current date is:** {DateTimeOffset.UtcNow:f}");
+        systemPromptBuilder.AppendLine("**The current user is:** Kage");
+
+        var messages = new List<ChatMessage>
+        {
+            new ChatMessage
+            {
+                Role = "system",
+                Content = systemPromptBuilder.ToString()
+            }
+        };
+
         foreach (var chunk in conversationChunks)
         {
-            string role = chunk.Type == ContextChunkType.UserInput ? "user" : "assistant";
             messages.Add(new ChatMessage
             {
-                Role = role,
+                Role = chunk.Type == ContextChunkType.UserInput ? "user" : "assistant",
                 Content = chunk.Content
             });
         }
-        
-        if (!userInputChunks.Any())
-        {
-            var userInput = contextChunks.FirstOrDefault(c => c.Type == ContextChunkType.UserInput)?.Content;
-            
-            if (!string.IsNullOrEmpty(userInput))
-            {
-                messages.Add(new ChatMessage
-                {
-                    Role = "user",
-                    Content = userInput
-                });
-            }
-        }
+
+        return messages;
     }
     
     private void TruncateMessages(List<ChatMessage> messages, int maxTokens)

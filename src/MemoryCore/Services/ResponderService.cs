@@ -230,8 +230,10 @@ public class ResponderService : IResponderService
         var embeddingResult = await _embeddingService.GetEmbeddingAsync(response);
         if (embeddingResult.IsSuccess)
         {
+            var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
             var memorygram = new Memorygram(
                 Id: Guid.NewGuid(),
+                ChatId: chatId,
                 Content: response,
                 Type: MemorygramType.AssistantResponse,
                 VectorEmbedding: embeddingResult.Value,
