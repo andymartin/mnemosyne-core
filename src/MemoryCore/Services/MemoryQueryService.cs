@@ -67,7 +67,11 @@ public class MemoryQueryService : IMemoryQueryService
             // Find similar memorygrams
             _logger.LogInformation("Finding similar memorygrams with topK: {TopK}", topK);
             Result<IEnumerable<MemorygramWithScore>> similarResult =
-                await _memorygramRepository.FindSimilarAsync(queryVector, topK);
+                await _memorygramRepository.FindSimilarAsync(
+                    queryVector,
+                    input.ReformulationType ?? MemoryReformulationType.Content,
+                    topK,
+                    input.ExcludeChatId);
 
             if (similarResult.IsFailed)
             {
@@ -174,7 +178,10 @@ public class MemoryQueryService : IMemoryQueryService
 
             // Find similar memorygrams
             Result<IEnumerable<MemorygramWithScore>> similarResult =
-                await _memorygramRepository.FindSimilarAsync(queryVector, topK);
+                await _memorygramRepository.FindSimilarAsync(
+                    queryVector,
+                    MemoryReformulationType.Content,
+                    topK);
 
             if (similarResult.IsFailed)
             {

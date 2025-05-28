@@ -33,7 +33,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WithValidInput_ReturnsSuccessResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -61,7 +61,7 @@ public class MemoryQueryServiceTests
             .ReturnsAsync(Result.Ok(queryVector));
 
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, input.TopK!.Value))
+            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null))
             .ReturnsAsync(Result.Ok(similarMemorygrams.AsEnumerable()));
 
         // Act
@@ -77,14 +77,14 @@ public class MemoryQueryServiceTests
         result.Value.Message.ShouldBeNull();
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, input.TopK!.Value), Times.Once);
+        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null), Times.Once);
     }
 
     [Fact]
     public async Task QueryAsync_WithNullTopK_UsesDefaultValue()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", null);
+        var input = new MemoryQueryInput("test query", null, MemoryReformulationType.Content, null);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -112,7 +112,7 @@ public class MemoryQueryServiceTests
             .ReturnsAsync(Result.Ok(queryVector));
 
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, It.IsAny<int>()))
+            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, It.IsAny<int>(), null))
             .ReturnsAsync(Result.Ok(similarMemorygrams.AsEnumerable()));
 
         // Act
@@ -125,14 +125,14 @@ public class MemoryQueryServiceTests
         result.Value.Status.ShouldBe("success");
 
         // Verify that a default value was used
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, It.IsAny<int>()), Times.Once);
+        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, It.IsAny<int>(), null), Times.Once);
     }
 
     [Fact]
     public async Task QueryAsync_WithEmptyQueryText_ReturnsFailResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("", 5);
+        var input = new MemoryQueryInput("", 5, MemoryReformulationType.Content, null);
 
         // Act
         _output.WriteLine("Executing QueryAsync with empty query text");
@@ -144,14 +144,14 @@ public class MemoryQueryServiceTests
         result.Errors.First().Message.ShouldContain("empty");
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 
     [Fact]
     public async Task QueryAsync_WithInvalidTopK_ReturnsFailResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 0);
+        var input = new MemoryQueryInput("test query", 0, MemoryReformulationType.Content, null);
 
         // Act
         _output.WriteLine("Executing QueryAsync with invalid TopK");
@@ -163,14 +163,14 @@ public class MemoryQueryServiceTests
         result.Errors.First().Message.ShouldContain("greater than 0");
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 
     [Fact]
     public async Task QueryAsync_WhenEmbeddingServiceFails_ReturnsFailResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var errorMessage = "Embedding service error";
 
         _mockEmbeddingService
@@ -187,14 +187,14 @@ public class MemoryQueryServiceTests
         result.Errors.First().Message.ShouldContain(errorMessage);
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 
     [Fact]
     public async Task QueryAsync_WhenRepositoryFails_ReturnsFailResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var errorMessage = "Repository error";
 
@@ -203,7 +203,7 @@ public class MemoryQueryServiceTests
             .ReturnsAsync(Result.Ok(queryVector));
 
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, input.TopK!.Value))
+            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null))
             .ReturnsAsync(Result.Fail(new Error(errorMessage)));
 
         // Act
@@ -216,14 +216,14 @@ public class MemoryQueryServiceTests
         result.Errors.First().Message.ShouldContain(errorMessage);
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, input.TopK!.Value), Times.Once);
+        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null), Times.Once);
     }
 
     [Fact]
     public async Task QueryAsync_WhenExceptionOccurs_ReturnsFailResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var exceptionMessage = "Test exception";
 
         _mockEmbeddingService
@@ -240,6 +240,6 @@ public class MemoryQueryServiceTests
         result.Errors.First().Message.ShouldContain(exceptionMessage);
 
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<int>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 }

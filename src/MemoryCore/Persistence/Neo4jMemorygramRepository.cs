@@ -261,7 +261,11 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         }
     }
 
-    public async Task<Result<IEnumerable<MemorygramWithScore>>> FindSimilarAsync(float[] queryVector, int topK)
+    public async Task<Result<IEnumerable<MemorygramWithScore>>> FindSimilarAsync(
+        float[] queryVector,
+        MemoryReformulationType reformulationType,
+        int topK,
+        Guid? excludeChatId = null)
     {
         if (queryVector == null || queryVector.Length == 0)
         {
@@ -279,9 +283,15 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
 
             return await session.ExecuteReadAsync(async tx =>
             {
-                var query = @"
+                string targetEmbeddingField = reformulationType.ToString() + "Embedding";
+                string indexName = "memorygram-" + targetEmbeddingField + "-index";
+
+                var query = $@"
+                        CYPHER runtime=vector
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
+                        WITH node, score
+                        WHERE ($excludeChatIdString IS NULL OR node.ChatId <> $excludeChatIdString)
                         RETURN node.id AS id, node.content AS content, node.type AS type,
                                node.topicalEmbedding AS topicalEmbedding, node.contentEmbedding AS contentEmbedding,
                                node.contextEmbedding AS contextEmbedding, node.metadataEmbedding AS metadataEmbedding,
@@ -294,9 +304,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
 
                 var parameters = new
                 {
-                    indexName = "memorygram_content_embedding",
+                    indexName = indexName,
                     topK = topK,
-                    queryVector = queryVector
+                    queryVector = queryVector,
+                    excludeChatIdString = excludeChatId.HasValue ? excludeChatId.Value.ToString() : null
                 };
 
                 var cursor = await tx.RunAsync(query, parameters);

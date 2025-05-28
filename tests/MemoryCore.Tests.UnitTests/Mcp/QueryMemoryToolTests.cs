@@ -28,7 +28,7 @@ public class QueryMemoryToolTests
     public async Task QueryMemoryAsync_WithValidInput_ReturnsSuccessResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var resultItems = new List<MemorygramResultItem>
         {
             new MemorygramResultItem(
@@ -81,7 +81,7 @@ public class QueryMemoryToolTests
     public async Task QueryMemoryAsync_WithEmptyQueryText_ReturnsErrorResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("", 5);
+        var input = new MemoryQueryInput("", 5, MemoryReformulationType.Content, null);
 
         // Act
         _output.WriteLine("Executing QueryMemoryAsync with empty query text");
@@ -101,7 +101,7 @@ public class QueryMemoryToolTests
     public async Task QueryMemoryAsync_WhenServiceReturnsError_ReturnsErrorResult()
     {
         // Arrange
-        var input = new MemoryQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var errorMessage = "Test error message";
 
         _mockMemoryQueryService
