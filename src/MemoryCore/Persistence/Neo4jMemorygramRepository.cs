@@ -283,11 +283,11 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
 
             return await session.ExecuteReadAsync(async tx =>
             {
-                string targetEmbeddingField = reformulationType.ToString() + "Embedding";
-                string indexName = "memorygram-" + targetEmbeddingField + "-index";
+                // Get the correct index name based on reformulation type
+                string reformulationTypeStr = reformulationType.ToString().ToLowerInvariant();
+                string indexName = $"memorygram_{reformulationTypeStr}_embedding";
 
                 var query = $@"
-                        CYPHER runtime=vector
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
                         WITH node, score

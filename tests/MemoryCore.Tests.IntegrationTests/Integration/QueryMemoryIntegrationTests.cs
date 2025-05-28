@@ -50,7 +50,7 @@ public class QueryMemoryIntegrationTests : IDisposable
         // Arrange
         var queryText = "Test query for integration test";
         var topK = 3;
-        var input = new MemoryQueryInput(queryText, topK);
+        var input = new MemoryQueryInput(queryText, topK, ReformulationType: MemoryReformulationType.Topical, ExcludeChatId: null);
 
         // First create some test memorygrams in Neo4j to query against
         var memorygrams = await CreateTestMemorygramsAsync();
@@ -94,7 +94,7 @@ public class QueryMemoryIntegrationTests : IDisposable
         // Arrange
         var queryText = "Test query with invalid topK";
         var topK = 0; // Invalid value
-        var input = new MemoryQueryInput(queryText, topK);
+        var input = new MemoryQueryInput(queryText, topK, ReformulationType: MemoryReformulationType.Topical, ExcludeChatId: null);
 
         // Act
         _output.WriteLine($"Executing QueryAsync with query: '{queryText}' and invalid topK: {topK}");
@@ -112,7 +112,7 @@ public class QueryMemoryIntegrationTests : IDisposable
         // Arrange
         var queryText = "";
         var topK = 5;
-        var input = new MemoryQueryInput(queryText, topK);
+        var input = new MemoryQueryInput(queryText, topK, ReformulationType: MemoryReformulationType.Topical, ExcludeChatId: null);
 
         // Act
         _output.WriteLine($"Executing QueryAsync with empty query text");
@@ -130,7 +130,7 @@ public class QueryMemoryIntegrationTests : IDisposable
         // Arrange
         var queryText = "Test query to verify embedding service integration";
         var topK = 3;
-        var input = new MemoryQueryInput(queryText, topK);
+        var input = new MemoryQueryInput(queryText, topK, ReformulationType: MemoryReformulationType.Topical, ExcludeChatId: null);
 
         // Create test memorygrams
         await CreateTestMemorygramsAsync();
@@ -170,7 +170,7 @@ public class QueryMemoryIntegrationTests : IDisposable
         // Arrange
         var queryText = "Test query with specific topK value";
         var topK = 3; // Specific value to test limit
-        var input = new MemoryQueryInput(queryText, topK);
+        var input = new MemoryQueryInput(queryText, topK, ReformulationType: MemoryReformulationType.Topical, ExcludeChatId: null);
 
         // Create test memorygrams - more than our requested topK
         await CreateTestMemorygramsAsync();
