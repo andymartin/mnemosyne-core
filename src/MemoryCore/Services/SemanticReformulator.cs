@@ -14,41 +14,25 @@ public class SemanticReformulator : ISemanticReformulator
         _languageModelService = languageModelService;
     }
 
-    public async Task<Result<MemoryReformulations>> ReformulateForStorageAsync(
-        string content, 
-        string? context = null, 
-        Dictionary<string, string>? metadata = null)
+    public async Task<Result<MemoryReformulations>> ReformulateForStorageAsync(string content)
     {
-        var prompt = BuildStorageReformulationPrompt(content, context, metadata);
+        var prompt = BuildStorageReformulationPrompt(content);
         return await ExecuteReformulationAsync(prompt);
     }
 
-    public async Task<Result<MemoryReformulations>> ReformulateForQueryAsync(
-        string query, 
-        string? conversationContext = null)
+    public async Task<Result<MemoryReformulations>> ReformulateForQueryAsync(string query)
     {
-        var prompt = BuildQueryReformulationPrompt(query, conversationContext);
+        var prompt = BuildQueryReformulationPrompt(query);
         return await ExecuteReformulationAsync(prompt);
     }
 
-    private string BuildStorageReformulationPrompt(
-        string content, 
-        string? context, 
-        Dictionary<string, string>? metadata)
+    private string BuildStorageReformulationPrompt(string content)
     {
-        var metadataString = metadata != null && metadata.Any() 
-            ? string.Join(", ", metadata.Select(kvp => $"{kvp.Key}:{kvp.Value}"))
-            : "None";
-        
-        var contextString = !string.IsNullOrWhiteSpace(context) ? context : "None";
-        
         return $$"""
 You are a semantic reformulation assistant. Your task is to generate multiple semantic representations of content for storage in a memory system.
 
 Given the following input:
 - Content: {{content}}
-- Context: {{contextString}}
-- Metadata: {{metadataString}}
 
 Generate four different semantic reformulations that capture different aspects of the content:
 
@@ -69,16 +53,13 @@ Ensure each reformulation is semantically rich and captures the essence of that 
 """;
     }
 
-    private string BuildQueryReformulationPrompt(string query, string? conversationContext)
+    private string BuildQueryReformulationPrompt(string query)
     {
-        var contextString = !string.IsNullOrWhiteSpace(conversationContext) ? conversationContext : "None";
-        
         return $$"""
 You are a semantic reformulation assistant. Your task is to generate multiple semantic representations of a query for retrieval from a memory system.
 
 Given the following input:
 - Query: {{query}}
-- Conversation Context: {{contextString}}
 
 Generate four different semantic reformulations that capture different aspects of the query:
 

@@ -28,8 +28,6 @@ namespace MemoryCore.Tests.UnitTests.Services
         {
             // Arrange
             var content = "Test content";
-            var context = "Test context";
-            var metadata = new Dictionary<string, string> { { "key1", "value1" } };
 
             var reformulations = new MemoryReformulations
             {
@@ -46,14 +44,12 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(content) &&
-                        req.Messages[0].Content.Contains(context) &&
-                        req.Messages[0].Content.Contains("key1:value1")),
+                        req.Messages[0].Content.Contains(content)),
                     LanguageModelType.Auxiliary)
                 .Returns(Result.Ok(jsonResponse));
 
             // Act
-            var result = await _reformulator.ReformulateForStorageAsync(content, context, metadata);
+            var result = await _reformulator.ReformulateForStorageAsync(content);
 
             // Assert
             result.IsSuccess.ShouldBeTrue();
@@ -68,9 +64,7 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(content) &&
-                        req.Messages[0].Content.Contains(context) &&
-                        req.Messages[0].Content.Contains("key1:value1")),
+                        req.Messages[0].Content.Contains(content)),
                     LanguageModelType.Auxiliary);
         }
 
@@ -79,9 +73,6 @@ namespace MemoryCore.Tests.UnitTests.Services
         {
             // Arrange
             var content = "Test content";
-            string? context = null;
-            Dictionary<string, string>? metadata = null;
-
             var reformulations = new MemoryReformulations
             {
                 Topical = "Topical reformulation",
@@ -97,14 +88,12 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(content) &&
-                        req.Messages[0].Content.Contains("Context: None") &&
-                        req.Messages[0].Content.Contains("Metadata: None")),
+                        req.Messages[0].Content.Contains(content)),
                     LanguageModelType.Auxiliary)
                 .Returns(Result.Ok(jsonResponse));
 
             // Act
-            var result = await _reformulator.ReformulateForStorageAsync(content, context, metadata);
+            var result = await _reformulator.ReformulateForStorageAsync(content);
 
             // Assert
             result.IsSuccess.ShouldBeTrue();
@@ -119,7 +108,6 @@ namespace MemoryCore.Tests.UnitTests.Services
         {
             // Arrange
             var query = "Test query";
-            var conversationContext = "Test conversation context";
 
             var reformulations = new MemoryReformulations
             {
@@ -136,13 +124,12 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(query) &&
-                        req.Messages[0].Content.Contains(conversationContext)),
+                        req.Messages[0].Content.Contains(query)),
                     LanguageModelType.Auxiliary)
                 .Returns(Result.Ok(jsonResponse));
 
             // Act
-            var result = await _reformulator.ReformulateForQueryAsync(query, conversationContext);
+            var result = await _reformulator.ReformulateForQueryAsync(query);
 
             // Assert
             result.IsSuccess.ShouldBeTrue();
@@ -157,8 +144,7 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(query) &&
-                        req.Messages[0].Content.Contains(conversationContext)),
+                        req.Messages[0].Content.Contains(query)),
                     LanguageModelType.Auxiliary);
         }
 
@@ -167,8 +153,6 @@ namespace MemoryCore.Tests.UnitTests.Services
         {
             // Arrange
             var query = "Test query";
-            string? conversationContext = null;
-
             var reformulations = new MemoryReformulations
             {
                 Topical = "Topical reformulation",
@@ -184,13 +168,12 @@ namespace MemoryCore.Tests.UnitTests.Services
                     Arg.Is<ChatCompletionRequest>(req => 
                         req.Messages.Count == 1 && 
                         req.Messages[0].Role == "user" && 
-                        req.Messages[0].Content.Contains(query) &&
-                        req.Messages[0].Content.Contains("Conversation Context: None")),
+                        req.Messages[0].Content.Contains(query)),
                     LanguageModelType.Auxiliary)
                 .Returns(Result.Ok(jsonResponse));
 
             // Act
-            var result = await _reformulator.ReformulateForQueryAsync(query, conversationContext);
+            var result = await _reformulator.ReformulateForQueryAsync(query);
 
             // Assert
             result.IsSuccess.ShouldBeTrue();
