@@ -110,7 +110,7 @@ Ensure each reformulation is semantically rich and captures the essence of that 
             Temperature = 0.3f
         };
 
-        var completionResult = await _languageModelService.GenerateCompletionAsync(request);
+        var completionResult = await _languageModelService.GenerateCompletionAsync(request, LanguageModelType.Auxiliary);
         
         if (completionResult.IsFailed)
         {
