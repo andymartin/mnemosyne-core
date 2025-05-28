@@ -15,7 +15,7 @@ public class ChatHub : Hub
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task SendMessage(string chatId, string userText)
+    public async Task SendMessage(Guid chatId, string userText)
     {
         try
         {
@@ -34,12 +34,12 @@ public class ChatHub : Hub
                 // Create AssistantMessageDto with recalled memory system prompt
                 var assistantMessageDto = new AssistantMessageDto
                 {
-                    MessageId = Guid.NewGuid().ToString(),
+                    MessageId = Guid.NewGuid(),
                     ConversationId = chatId,
                     Content = result.Value.Response,
                     IsComplete = true,
                     Timestamp = DateTime.UtcNow,
-                    RecalledMemorySystemPrompt = result.Value.SystemPrompt
+                    RecalledMemory = result.Value.SystemPrompt
                 };
                 
                 // Send the assistant's response back to the client

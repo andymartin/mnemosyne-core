@@ -24,53 +24,23 @@ public class ChatService : IChatService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<ResponseResult>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null)
+    public async Task<Result<ResponseResult>> ProcessUserMessageAsync(Guid chatId, string userText, Guid? pipelineId = null)
     {
         try
         {
             _logger.LogInformation("Processing user message for chat {ChatId}", chatId);
 
-            // 1. Store user message memorygram
-            var userMemorygram = new Memorygram(
-                Id: Guid.NewGuid(),
-                Content: userText,
-                Type: MemorygramType.UserInput,
-                VectorEmbedding: Array.Empty<float>(),
-                Source: "Chat",
-                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow,
-                ChatId: chatId
-            );
-
-            var userMemorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(userMemorygram);
-
-            if (userMemorygramResult.IsFailed)
-            {
-                _logger.LogError("Failed to store user message for chat {ChatId}: {Errors}",
-                    chatId, string.Join(", ", userMemorygramResult.Errors.Select(e => e.Message)));
-                return Result.Fail<ResponseResult>("Failed to store user message: " +
-                    string.Join(", ", userMemorygramResult.Errors.Select(e => e.Message)));
-            }
-
-            _logger.LogInformation("User message stored with ID {UserMemorygramId} for chat {ChatId}",
-                userMemorygramResult.Value.Id, chatId);
-
-            // 2. Create PipelineExecutionRequest
             var pipelineRequest = new PipelineExecutionRequest
             {
                 PipelineId = pipelineId,
                 UserInput = userText,
                 SessionMetadata = new Dictionary<string, object>
                 {
-                    ["chatId"] = chatId,
-                    ["userMemorygramId"] = userMemorygramResult.Value.Id
+                    ["chatId"] = chatId
                 }
             };
 
-            // 3. Call ResponderService (not AgenticWorkflowService)
             var responseResult = await _responderService.ProcessRequestAsync(pipelineRequest);
-
             if (responseResult.IsFailed)
             {
                 _logger.LogError("Failed to process message with ResponderService for chat {ChatId}: {Errors}",
@@ -81,38 +51,6 @@ public class ChatService : IChatService
 
             _logger.LogInformation("ResponderService processing completed for chat {ChatId}", chatId);
 
-            // 4. Store assistant response memorygram with proper chain linking
-            var assistantMemorygram = new Memorygram(
-                Id: Guid.NewGuid(),
-                Content: responseResult.Value.Response,
-                Type: MemorygramType.AssistantResponse,
-                VectorEmbedding: Array.Empty<float>(), // Will be populated by MemorygramService
-                Source: "ResponderService",
-                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow,
-                ChatId: chatId,
-                PreviousMemorygramId: userMemorygramResult.Value.Id // Link to user message
-            );
-
-            var assistantMemorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(assistantMemorygram);
-
-            if (assistantMemorygramResult.IsFailed)
-            {
-                _logger.LogError("Failed to store assistant response for chat {ChatId}: {Errors}",
-                    chatId, string.Join(", ", assistantMemorygramResult.Errors.Select(e => e.Message)));
-                return Result.Fail<ResponseResult>("Failed to store assistant response: " +
-                    string.Join(", ", assistantMemorygramResult.Errors.Select(e => e.Message)));
-            }
-
-            _logger.LogInformation("Assistant response stored with ID {AssistantMemorygramId} for chat {ChatId}",
-                assistantMemorygramResult.Value.Id, chatId);
-
-            // 5. Update conversation chain
-            await UpdateConversationChain(userMemorygramResult.Value.Id, assistantMemorygramResult.Value.Id);
-
-            // 6. Return assistant response to client
-            _logger.LogInformation("Chat processing completed successfully for chat {ChatId}", chatId);
             return Result.Ok(responseResult.Value);
         }
         catch (Exception ex)

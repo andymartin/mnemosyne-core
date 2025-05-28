@@ -83,11 +83,20 @@ public class ResponderService : IResponderService
             _logger.LogInformation("Using empty pipeline (no pipeline ID provided)");
         }
 
-        // 1. Add chat history to request metadata (NOT associative memories - those come from pipeline stages)
-        await AddChatHistoryToRequest(request);
+        var state = new PipelineExecutionState
+        {
+            RunId = Guid.NewGuid(),
+            PipelineId = actualPipelineId,
+            Request = request,
+            History = new List<PipelineStageHistory>(),
+            Context = new List<ContextChunk>()
+        };
+
+        // 1. Add chat history (NOT associative memories - those come from pipeline stages)
+        await AddChatHistoryToState(state, request);
 
         // 2. Execute pipeline (includes AgenticWorkflowStage)
-        var executionResult = await _pipelineExecutorService.ExecutePipelineAsync(actualPipelineId, request);
+        var executionResult = await _pipelineExecutorService.ExecutePipelineAsync(state);
             
         if (executionResult.IsFailed)
         {
@@ -155,17 +164,29 @@ public class ResponderService : IResponderService
         return Result.Ok(responseResult);
     }
     
-    private async Task AddChatHistoryToRequest(PipelineExecutionRequest request)
+    private async Task AddChatHistoryToState(PipelineExecutionState state, PipelineExecutionRequest request)
     {
         var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
         
         if (!string.IsNullOrEmpty(chatId))
         {
-            // Get conversation history and add to request metadata
+            // Get conversation history and add as context chunks
             var historyResult = await _memoryQueryService.GetChatHistoryAsync(chatId);
             if (historyResult.IsSuccess)
             {
-                request.SessionMetadata["conversationHistory"] = historyResult.Value;
+                foreach (var historyItem in historyResult.Value)
+                {
+                    state.Context.Add(new ContextChunk
+                    {
+                        Type = historyItem.Type == MemorygramType.UserInput ? ContextChunkType.UserInput : ContextChunkType.AssistantResponse,
+                        Content = historyItem.Content,
+                        Provenance = new ContextProvenance
+                        {
+                            Source = historyItem.Type == MemorygramType.UserInput ? "User" : "Assistant",
+                            Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp)
+                        }
+                    });
+                }
             }
         }
     }

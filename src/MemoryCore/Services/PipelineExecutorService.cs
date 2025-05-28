@@ -23,8 +23,9 @@ public class PipelineExecutorService : IPipelineExecutorService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<PipelineExecutionState>> ExecutePipelineAsync(Guid pipelineId, PipelineExecutionRequest request)
+    public async Task<Result<PipelineExecutionState>> ExecutePipelineAsync(PipelineExecutionState state)
     {
+        var pipelineId = state.PipelineId;
         _logger.LogInformation("Attempting to execute pipeline ID: {PipelineId}", pipelineId);
 
         PipelineManifest manifest;
@@ -49,7 +50,7 @@ public class PipelineExecutorService : IPipelineExecutorService
             }
             manifest = manifestResult.Value;
         }
-        var runId = Guid.NewGuid(); // Consider if RunId should come from request or be generated here.
+        var runId = state.RunId;
 
         var status = new PipelineExecutionStatus
         {
@@ -68,7 +69,7 @@ public class PipelineExecutorService : IPipelineExecutorService
         }
         _logger.LogInformation("Pipeline ID: {PipelineId} execution initiated with RunId: {RunId}", pipelineId, runId);
 
-        var finalState = await RunPipelineInternalAsync(runId, manifest, request, status);
+        var finalState = await RunPipelineInternalAsync(state, status);
 
         // Update final status based on the outcome of RunPipelineInternalAsync
         if (_activeExecutions.TryGetValue(runId, out var finalStatus))
@@ -100,15 +101,35 @@ public class PipelineExecutorService : IPipelineExecutorService
         return Result.Fail<PipelineExecutionStatus>($"Execution status not found for Run ID: {runId}");
     }
 
-    private async Task<PipelineExecutionState> RunPipelineInternalAsync(Guid runId, PipelineManifest manifest, PipelineExecutionRequest initialRequest, PipelineExecutionStatus status)
+    private async Task<PipelineExecutionState> RunPipelineInternalAsync(PipelineExecutionState state, PipelineExecutionStatus status)
     {
-        var executionState = new PipelineExecutionState
+        var runId = state.RunId;
+        
+        // Get the manifest from the state's PipelineId
+        PipelineManifest manifest;
+        if (state.PipelineId == Guid.Empty)
         {
-            RunId = runId,
-            PipelineId = manifest.Id,
-            Request = initialRequest,
-            Context = new List<ContextChunk>()
-        };
+            manifest = new PipelineManifest
+            {
+                Id = Guid.Empty,
+                Name = "Empty Pipeline",
+                Description = "This is an empty pipeline executed when no specific pipeline ID is provided.",
+                Components = new List<ComponentConfiguration>()
+            };
+        }
+        else
+        {
+            var manifestResult = await _pipelinesRepository.GetPipelineAsync(state.PipelineId);
+            if (manifestResult.IsFailed)
+            {
+                _logger.LogWarning("RunId {RunId}: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", runId, state.PipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
+                status.Status = PipelineStatus.Failed;
+                status.Message = $"Pipeline manifest not found for ID {state.PipelineId}";
+                status.EndTime = DateTimeOffset.UtcNow;
+                return state;
+            }
+            manifest = manifestResult.Value;
+        }
 
         try
         {
@@ -123,7 +144,7 @@ public class PipelineExecutorService : IPipelineExecutorService
                 status.Status = PipelineStatus.Completed;
                 status.Message = "Pipeline completed: No components to execute.";
                 status.EndTime = DateTimeOffset.UtcNow;
-                return executionState;
+                return state;
             }
 
             foreach (var componentConfig in manifest.Components)
@@ -167,7 +188,7 @@ public class PipelineExecutorService : IPipelineExecutorService
                     if (component != null)
                     {
                         _logger.LogInformation("RunId {RunId}: Executing stage {StageName}", runId, component.Name);
-                        executionState = await component.ExecuteAsync(executionState, status);
+                        state = await component.ExecuteAsync(state, status);
                         status.AddStageHistory(component.Name, StageResult.Success, $"Stage {component.Name} completed.");
                         _logger.LogInformation("RunId {RunId}: Finished stage: {StageName}", runId, component.Name);
                     }
@@ -203,6 +224,6 @@ public class PipelineExecutorService : IPipelineExecutorService
         {
             status.EndTime = DateTimeOffset.UtcNow;
         }
-        return executionState;
+        return state;
     }
 }

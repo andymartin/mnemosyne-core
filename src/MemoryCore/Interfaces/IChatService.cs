@@ -5,5 +5,5 @@ namespace Mnemosyne.Core.Interfaces;
 
 public interface IChatService
 {
-    Task<Result<ResponseResult>> ProcessUserMessageAsync(string chatId, string userText, Guid? pipelineId = null);
+    Task<Result<ResponseResult>> ProcessUserMessageAsync(Guid chatId, string userText, Guid? pipelineId = null);
 }

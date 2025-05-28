@@ -37,7 +37,7 @@ public class ChatHubControllerTests
     [Fact]
     public async Task SendMessage_ShouldNotThrowException()
     {
-        var chatId = "testChatId";
+        var chatId = Guid.NewGuid();
         var userText = "testMessage";
 
         // Setup the ChatService to return a successful result

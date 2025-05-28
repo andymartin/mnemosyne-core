@@ -195,53 +195,6 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
-    /// Asynchronously initiates the execution of the specified cognitive pipeline.
-    /// </summary>
-    /// <param name="pipelineId">The ID of the pipeline to execute.</param>
-    /// <param name="request">The pipeline execution request data.</param>
-    /// <returns>The initial status of the pipeline execution.</returns>
-    [HttpPost("{pipelineId:guid}/execute")]
-    [ProducesResponseType(typeof(PipelineExecutionStatus), StatusCodes.Status202Accepted)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<PipelineExecutionStatus>> ExecutePipeline(
-        Guid pipelineId,
-        [FromBody] PipelineExecutionRequest request)
-    {
-        if (request == null)
-        {
-            _logger.LogWarning("ExecutePipeline request received with null body for Pipeline ID: {PipelineId}.", pipelineId);
-            return BadRequest(new ProblemDetails { Title = "Invalid request", Detail = "Execution request body cannot be null." });
-        }
-        if (pipelineId == Guid.Empty)
-        {
-            _logger.LogWarning("ExecutePipeline request received with empty pipelineId.");
-            return BadRequest(new ProblemDetails { Title = "Invalid request", Detail = "Pipeline ID cannot be empty." });
-        }
-        _logger.LogInformation("Attempting to execute pipeline ID: {PipelineId}", pipelineId);
-
-        var result = await _pipelineExecutorService.ExecutePipelineAsync(pipelineId, request);
-        if (result.IsFailed)
-        {
-            if (result.Errors.Any(e => e.Message.ToLower().Contains("not found")))
-            {
-                _logger.LogWarning("Cannot execute pipeline ID {PipelineId} - not found.", pipelineId);
-                return NotFound(new ProblemDetails { Title = "Pipeline not found", Detail = $"Pipeline with ID {pipelineId} was not found for execution." });
-            }
-            _logger.LogWarning("Failed to initiate execution for pipeline {PipelineId}: {Errors}", pipelineId, string.Join(", ", result.Errors.Select(e => e.Message)));
-            return Problem(
-                title: "Failed to initiate pipeline execution",
-                detail: string.Join(", ", result.Errors.Select(e => e.Message)),
-                statusCode: StatusCodes.Status500InternalServerError);
-        }
-
-        _logger.LogInformation("Pipeline ID: {PipelineId} execution accepted with RunId: {RunId}", pipelineId, result.Value.RunId);
-        var locationUrl = $"/api/pipelines/{pipelineId}/status/{result.Value.RunId}";
-        return Accepted(locationUrl, result.Value);
-    }
-
-    /// <summary>
     /// Retrieves the current status and result (if available) of a specific pipeline execution run.
     /// </summary>
     /// <param name="pipelineId">The ID of the pipeline.</param>

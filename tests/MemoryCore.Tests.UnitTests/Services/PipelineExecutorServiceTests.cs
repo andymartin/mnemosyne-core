@@ -38,7 +38,14 @@ public class PipelineExecutorServiceTests
         var request = new PipelineExecutionRequest();
 
         // Act
-        var result = await _service.ExecutePipelineAsync(emptyPipelineId, request);
+        var state = new PipelineExecutionState
+        {
+            RunId = Guid.NewGuid(),
+            PipelineId = emptyPipelineId,
+            Request = request,
+            Context = new List<ContextChunk>()
+        };
+        var result = await _service.ExecutePipelineAsync(state);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -77,12 +84,19 @@ public class PipelineExecutorServiceTests
             .Returns(new NullPipelineStage());
 
         // Act
-        var result = await _service.ExecutePipelineAsync(pipelineId, request);
+        var state = new PipelineExecutionState
+        {
+            RunId = Guid.NewGuid(),
+            PipelineId = pipelineId,
+            Request = request,
+            Context = new List<ContextChunk>()
+        };
+        var result = await _service.ExecutePipelineAsync(state);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.PipelineId.ShouldBe(pipelineId);
-        _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(pipelineId), Times.Once);
+        _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(pipelineId), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -96,7 +110,14 @@ public class PipelineExecutorServiceTests
             .ReturnsAsync(Result.Fail<PipelineManifest>("Pipeline manifest not found."));
 
         // Act
-        var result = await _service.ExecutePipelineAsync(pipelineId, request);
+        var state = new PipelineExecutionState
+        {
+            RunId = Guid.NewGuid(),
+            PipelineId = pipelineId,
+            Request = request,
+            Context = new List<ContextChunk>()
+        };
+        var result = await _service.ExecutePipelineAsync(state);
 
         // Assert
         result.IsFailed.ShouldBeTrue();

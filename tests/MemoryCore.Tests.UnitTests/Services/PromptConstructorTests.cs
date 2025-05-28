@@ -38,7 +38,7 @@ public class PromptConstructorTests
     [Fact]
     public void ConstructPrompt_WithNullState_ShouldReturnFailure()
     {
-        var result = _service.ConstructPrompt(null);
+        var result = _service.ConstructPrompt(null!);
 
         result.IsSuccess.ShouldBeFalse();
         result.Errors.First().Message.ShouldContain("Pipeline execution state contains no context");

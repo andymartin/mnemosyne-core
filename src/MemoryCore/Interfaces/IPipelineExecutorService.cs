@@ -5,6 +5,6 @@ namespace Mnemosyne.Core.Interfaces;
 
 public interface IPipelineExecutorService
 {
-    Task<Result<PipelineExecutionState>> ExecutePipelineAsync(Guid pipelineId, PipelineExecutionRequest request);
+    Task<Result<PipelineExecutionState>> ExecutePipelineAsync(PipelineExecutionState state);
     Result<PipelineExecutionStatus> GetExecutionStatus(Guid runId);
 }
