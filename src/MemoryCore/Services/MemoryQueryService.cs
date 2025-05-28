@@ -35,7 +35,7 @@ public class MemoryQueryService : IMemoryQueryService
     /// </summary>
     /// <param name="input">The query input containing the query text and optional parameters</param>
     /// <returns>A result containing the query results or error information</returns>
-    public async Task<Result<McpQueryResult>> QueryAsync(McpQueryInput input)
+    public async Task<Result<MemoryQueryResult>> QueryAsync(MemoryQueryInput input)
     {
         try
         {
@@ -91,7 +91,7 @@ public class MemoryQueryService : IMemoryQueryService
             _logger.LogInformation("Query returned {Count} results", resultItems.Count);
 
             // Return success result
-            return Result.Ok(new McpQueryResult("success", resultItems, null));
+            return Result.Ok(new MemoryQueryResult("success", resultItems, null));
         }
         catch (Exception ex)
         {

@@ -28,7 +28,7 @@ public class QueryMemoryToolTests
     public async Task QueryMemoryAsync_WithValidInput_ReturnsSuccessResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var resultItems = new List<MemorygramResultItem>
         {
             new MemorygramResultItem(
@@ -38,7 +38,7 @@ public class QueryMemoryToolTests
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow)
         };
-        var expectedResult = new McpQueryResult("success", resultItems, null);
+        var expectedResult = new MemoryQueryResult("success", resultItems, null);
 
         _mockMemoryQueryService
             .Setup(x => x.QueryAsync(input))
@@ -74,14 +74,14 @@ public class QueryMemoryToolTests
         result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("null");
 
-        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<MemoryQueryInput>()), Times.Never);
     }
 
     [Fact]
     public async Task QueryMemoryAsync_WithEmptyQueryText_ReturnsErrorResult()
     {
         // Arrange
-        var input = new McpQueryInput("", 5);
+        var input = new MemoryQueryInput("", 5);
 
         // Act
         _output.WriteLine("Executing QueryMemoryAsync with empty query text");
@@ -94,14 +94,14 @@ public class QueryMemoryToolTests
         result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("empty");
 
-        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<McpQueryInput>()), Times.Never);
+        _mockMemoryQueryService.Verify(x => x.QueryAsync(It.IsAny<MemoryQueryInput>()), Times.Never);
     }
 
     [Fact]
     public async Task QueryMemoryAsync_WhenServiceReturnsError_ReturnsErrorResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var errorMessage = "Test error message";
 
         _mockMemoryQueryService

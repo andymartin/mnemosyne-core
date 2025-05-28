@@ -31,24 +31,24 @@ public class QueryMemoryTool : IQueryMemoryTool
     /// <param name="input">The query input containing the query text and optional parameters</param>
     /// <returns>A result containing the query results or error information</returns>
     [McpServerTool(Name = "queryMemory")]
-    public async Task<McpQueryResult> QueryMemoryAsync(McpQueryInput input)
+    public async Task<MemoryQueryResult> QueryMemoryAsync(MemoryQueryInput input)
     {
         if (input == null)
         {
             _logger.LogError("QueryMemoryAsync called with null input");
-            return new McpQueryResult("error", null, "Query input cannot be null");
+            return new MemoryQueryResult("error", null, "Query input cannot be null");
         }
 
         if (string.IsNullOrWhiteSpace(input.QueryText))
         {
             _logger.LogError("QueryMemoryAsync called with empty query text");
-            return new McpQueryResult("error", null, "Query text cannot be empty");
+            return new MemoryQueryResult("error", null, "Query text cannot be empty");
         }
 
         _logger.LogInformation("Executing memory query with text: {QueryText}, TopK: {TopK}",
             input.QueryText, input.TopK);
 
-        Result<McpQueryResult> result = await _memoryQueryService.QueryAsync(input);
+        Result<MemoryQueryResult> result = await _memoryQueryService.QueryAsync(input);
 
         if (result.IsSuccess)
         {
@@ -58,7 +58,7 @@ public class QueryMemoryTool : IQueryMemoryTool
         {
             string errorMessage = string.Join(", ", result.Errors.Select(e => e.Message));
             _logger.LogError("Message executing memory query: {ErrorMessage}", errorMessage);
-            return new McpQueryResult("error", null, errorMessage);
+            return new MemoryQueryResult("error", null, errorMessage);
         }
     }
 }

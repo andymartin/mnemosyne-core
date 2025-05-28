@@ -33,7 +33,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WithValidInput_ReturnsSuccessResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -84,7 +84,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WithNullTopK_UsesDefaultValue()
     {
         // Arrange
-        var input = new McpQueryInput("test query", null);
+        var input = new MemoryQueryInput("test query", null);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -132,7 +132,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WithEmptyQueryText_ReturnsFailResult()
     {
         // Arrange
-        var input = new McpQueryInput("", 5);
+        var input = new MemoryQueryInput("", 5);
 
         // Act
         _output.WriteLine("Executing QueryAsync with empty query text");
@@ -151,7 +151,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WithInvalidTopK_ReturnsFailResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 0);
+        var input = new MemoryQueryInput("test query", 0);
 
         // Act
         _output.WriteLine("Executing QueryAsync with invalid TopK");
@@ -170,7 +170,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WhenEmbeddingServiceFails_ReturnsFailResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var errorMessage = "Embedding service error";
 
         _mockEmbeddingService
@@ -194,7 +194,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WhenRepositoryFails_ReturnsFailResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var errorMessage = "Repository error";
 
@@ -223,7 +223,7 @@ public class MemoryQueryServiceTests
     public async Task QueryAsync_WhenExceptionOccurs_ReturnsFailResult()
     {
         // Arrange
-        var input = new McpQueryInput("test query", 5);
+        var input = new MemoryQueryInput("test query", 5);
         var exceptionMessage = "Test exception";
 
         _mockEmbeddingService

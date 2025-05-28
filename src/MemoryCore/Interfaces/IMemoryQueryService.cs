@@ -13,7 +13,7 @@ public interface IMemoryQueryService
     /// </summary>
     /// <param name="input">The query input containing the query text and optional parameters</param>
     /// <returns>A result containing the query results or error information</returns>
-    Task<Result<McpQueryResult>> QueryAsync(McpQueryInput input);
+    Task<Result<MemoryQueryResult>> QueryAsync(MemoryQueryInput input);
 
     /// <summary>
     /// Retrieves chat history for a specific chat ID

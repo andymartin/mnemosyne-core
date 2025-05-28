@@ -9,5 +9,5 @@ public interface IQueryMemoryTool
     /// </summary>
     /// <param name="input">The query input containing the query text and optional parameters</param>
     /// <returns>A result containing the query results or error information</returns>
-    Task<McpQueryResult> QueryMemoryAsync(McpQueryInput input);
+    Task<MemoryQueryResult> QueryMemoryAsync(MemoryQueryInput input);
 }
