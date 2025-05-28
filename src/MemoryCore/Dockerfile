@@ -17,6 +17,17 @@ WORKDIR /app
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+# ENV for better diagnostics (used by Visual Studio)
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true \
+    ASPNETCORE_URLS=http://+:80 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+   
+# Debugger support
+RUN apt-get update && \
+    apt-get install -y unzip && \
+    curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
+
 COPY --from=build-env /app/out .
 
 # Expose port 80 for the application
