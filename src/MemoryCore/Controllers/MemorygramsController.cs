@@ -39,7 +39,10 @@ public class MemorygramsController : ControllerBase
                 Guid.NewGuid(),
                 request.Content,
                 request.Type,
-                Array.Empty<float>(),
+                Array.Empty<float>(), // TopicalEmbedding
+                Array.Empty<float>(), // ContentEmbedding
+                Array.Empty<float>(), // ContextEmbedding
+                Array.Empty<float>(), // MetadataEmbedding
                 "User", // Default source for new memorygrams from user input
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
@@ -161,11 +164,18 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Id,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding,
+            existingMemorygram.TopicalEmbedding,
+            existingMemorygram.ContentEmbedding,
+            existingMemorygram.ContextEmbedding,
+            existingMemorygram.MetadataEmbedding,
             existingMemorygram.Source, // Preserve existing source
             existingMemorygram.Timestamp, // Preserve existing timestamp
             existingMemorygram.CreatedAt,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            existingMemorygram.ChatId,
+            existingMemorygram.PreviousMemorygramId,
+            existingMemorygram.NextMemorygramId,
+            existingMemorygram.Sequence
         );
 
         try
@@ -246,11 +256,18 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Id,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding,
+            existingMemorygram.TopicalEmbedding,
+            existingMemorygram.ContentEmbedding,
+            existingMemorygram.ContextEmbedding,
+            existingMemorygram.MetadataEmbedding,
             existingMemorygram.Source,
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            existingMemorygram.ChatId,
+            existingMemorygram.PreviousMemorygramId,
+            existingMemorygram.NextMemorygramId,
+            existingMemorygram.Sequence
         );
 
         try

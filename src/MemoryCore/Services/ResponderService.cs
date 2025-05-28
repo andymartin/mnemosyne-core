@@ -201,7 +201,10 @@ public class ResponderService : IResponderService
                 Id: Guid.NewGuid(),
                 Content: request.UserInput,
                 Type: MemorygramType.UserInput,
-                VectorEmbedding: embeddingResult.Value,
+                TopicalEmbedding: embeddingResult.Value,    // Using same embedding for all types until specialized embedding generation is implemented
+                ContentEmbedding: embeddingResult.Value,
+                ContextEmbedding: embeddingResult.Value,
+                MetadataEmbedding: embeddingResult.Value,
                 Source: "ResponderService",
                 Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow,
@@ -233,14 +236,17 @@ public class ResponderService : IResponderService
             var chatId = request.SessionMetadata.GetValueOrDefault("chatId")?.ToString();
             var memorygram = new Memorygram(
                 Id: Guid.NewGuid(),
-                ChatId: chatId,
                 Content: response,
                 Type: MemorygramType.AssistantResponse,
-                VectorEmbedding: embeddingResult.Value,
+                TopicalEmbedding: embeddingResult.Value,    // Using same embedding for all types until specialized embedding generation is implemented
+                ContentEmbedding: embeddingResult.Value,
+                ContextEmbedding: embeddingResult.Value,
+                MetadataEmbedding: embeddingResult.Value,
                 Source: "ResponderService",
                 Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow
+                UpdatedAt: DateTimeOffset.UtcNow,
+                ChatId: chatId
             );
             
             var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);

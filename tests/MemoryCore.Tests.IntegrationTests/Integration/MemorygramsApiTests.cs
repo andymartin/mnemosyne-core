@@ -84,9 +84,15 @@ public class MemorygramsApiTests
         content!.Id.ShouldNotBe(Guid.Empty);
         content.Content.ShouldBe(request.Content);
 
-        // Verify embedding exists and has the correct dimension
-        content.VectorEmbedding.ShouldNotBeNull();
-        content.VectorEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        // Verify embeddings exist and have the correct dimension
+        content.TopicalEmbedding.ShouldNotBeNull();
+        content.TopicalEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        content.ContentEmbedding.ShouldNotBeNull();
+        content.ContentEmbedding.Length.ShouldBe(1024);
+        content.ContextEmbedding.ShouldNotBeNull();
+        content.ContextEmbedding.Length.ShouldBe(1024);
+        content.MetadataEmbedding.ShouldNotBeNull();
+        content.MetadataEmbedding.Length.ShouldBe(1024);
     }
 
     [Fact]
@@ -115,9 +121,15 @@ public class MemorygramsApiTests
         content!.Id.ToString().ShouldBe(id);
         content.Content.ShouldBe(createRequest.Content);
 
-        // Verify embedding exists and has the correct dimension
-        content.VectorEmbedding.ShouldNotBeNull();
-        content.VectorEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        // Verify embeddings exist and have the correct dimension
+        content.TopicalEmbedding.ShouldNotBeNull();
+        content.TopicalEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        content.ContentEmbedding.ShouldNotBeNull();
+        content.ContentEmbedding.Length.ShouldBe(1024);
+        content.ContextEmbedding.ShouldNotBeNull();
+        content.ContextEmbedding.Length.ShouldBe(1024);
+        content.MetadataEmbedding.ShouldNotBeNull();
+        content.MetadataEmbedding.Length.ShouldBe(1024);
     }
 
     [Fact]
@@ -183,9 +195,15 @@ public class MemorygramsApiTests
         content!.Id.ToString().ShouldBe(id);
         content.Content.ShouldBe(patchRequest.Content);
 
-        // Verify embedding exists and has the correct dimension (should be the original one)
-        content.VectorEmbedding.ShouldNotBeNull();
-        content.VectorEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        // Verify embeddings exist and have the correct dimension (should be the original ones)
+        content.TopicalEmbedding.ShouldNotBeNull();
+        content.TopicalEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        content.ContentEmbedding.ShouldNotBeNull();
+        content.ContentEmbedding.Length.ShouldBe(1024);
+        content.ContextEmbedding.ShouldNotBeNull();
+        content.ContextEmbedding.Length.ShouldBe(1024);
+        content.MetadataEmbedding.ShouldNotBeNull();
+        content.MetadataEmbedding.Length.ShouldBe(1024);
     }
 
     [Fact]
@@ -339,9 +357,15 @@ public class MemorygramsApiTests
         content!.Id.ToString().ShouldBe(id);
         content.Content.ShouldBe(updateRequest.Content);
 
-        // Verify embedding exists and has the correct dimension (PUT updates the embedding)
-        content.VectorEmbedding.ShouldNotBeNull();
-        content.VectorEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        // Verify embeddings exist and have the correct dimension (PUT updates the embeddings)
+        content.TopicalEmbedding.ShouldNotBeNull();
+        content.TopicalEmbedding.Length.ShouldBe(1024); // Dimension from embedding service
+        content.ContentEmbedding.ShouldNotBeNull();
+        content.ContentEmbedding.Length.ShouldBe(1024);
+        content.ContextEmbedding.ShouldNotBeNull();
+        content.ContextEmbedding.Length.ShouldBe(1024);
+        content.MetadataEmbedding.ShouldNotBeNull();
+        content.MetadataEmbedding.Length.ShouldBe(1024);
     }
 
     [Fact]

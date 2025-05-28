@@ -55,18 +55,52 @@ public class Neo4jService
                     vectorDimensions = 1024;
                 }
 
-                // Create vector index for Memorygram.vectorEmbedding
+                // Create vector indexes for all embedding fields
                 var parameters = new { dimensions = vectorDimensions };
+                
+                // Create vector index for Memorygram.topicalEmbedding
                 await tx.RunAsync(@"
-                        CREATE VECTOR INDEX memorygram_content_embedding IF NOT EXISTS
-                        FOR (m:Memorygram) ON (m.vectorEmbedding)
+                        CREATE VECTOR INDEX memorygram_topical_embedding IF NOT EXISTS
+                        FOR (m:Memorygram) ON (m.topicalEmbedding)
                         OPTIONS {indexConfig: {
                           `vector.dimensions`: $dimensions,
                           `vector.similarity_function`: 'cosine'
                         }}
                     ", parameters);
-
-                _logger.LogInformation("Created vector index on Memorygram.vectorEmbedding with {Dimensions} dimensions", vectorDimensions);
+                _logger.LogInformation("Created vector index on Memorygram.topicalEmbedding with {Dimensions} dimensions", vectorDimensions);
+                
+                // Create vector index for Memorygram.contentEmbedding
+                await tx.RunAsync(@"
+                        CREATE VECTOR INDEX memorygram_content_embedding IF NOT EXISTS
+                        FOR (m:Memorygram) ON (m.contentEmbedding)
+                        OPTIONS {indexConfig: {
+                          `vector.dimensions`: $dimensions,
+                          `vector.similarity_function`: 'cosine'
+                        }}
+                    ", parameters);
+                _logger.LogInformation("Created vector index on Memorygram.contentEmbedding with {Dimensions} dimensions", vectorDimensions);
+                
+                // Create vector index for Memorygram.contextEmbedding
+                await tx.RunAsync(@"
+                        CREATE VECTOR INDEX memorygram_context_embedding IF NOT EXISTS
+                        FOR (m:Memorygram) ON (m.contextEmbedding)
+                        OPTIONS {indexConfig: {
+                          `vector.dimensions`: $dimensions,
+                          `vector.similarity_function`: 'cosine'
+                        }}
+                    ", parameters);
+                _logger.LogInformation("Created vector index on Memorygram.contextEmbedding with {Dimensions} dimensions", vectorDimensions);
+                
+                // Create vector index for Memorygram.metadataEmbedding
+                await tx.RunAsync(@"
+                        CREATE VECTOR INDEX memorygram_metadata_embedding IF NOT EXISTS
+                        FOR (m:Memorygram) ON (m.metadataEmbedding)
+                        OPTIONS {indexConfig: {
+                          `vector.dimensions`: $dimensions,
+                          `vector.similarity_function`: 'cosine'
+                        }}
+                    ", parameters);
+                _logger.LogInformation("Created vector index on Memorygram.metadataEmbedding with {Dimensions} dimensions", vectorDimensions);
 
                 return 1;
             });

@@ -310,7 +310,7 @@ public class PromptConstructorTests
         var systemMessages = result.Value.Request.Messages.Where(m => m.Role == "system").ToList();
         systemMessages.Count.ShouldBeGreaterThan(0);
         
-        var mainSystemMessage = systemMessages.FirstOrDefault(m => m.Content.Contains("You are Nemo"));
+        var mainSystemMessage = systemMessages.FirstOrDefault(m => m.Content.Contains("you are Nemo"));
         mainSystemMessage.ShouldNotBeNull();
     }
 

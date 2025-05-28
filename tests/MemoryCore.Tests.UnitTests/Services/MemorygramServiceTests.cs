@@ -36,9 +36,12 @@ public class MemorygramServiceTests
             Guid.NewGuid(),
             "Test content",
             MemorygramType.UserInput,
-            Array.Empty<float>(),
-            "Test", // Added Source
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
+            "Test",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
@@ -48,15 +51,23 @@ public class MemorygramServiceTests
             .Setup(s => s.GetEmbeddingAsync(memorygram.Content))
             .ReturnsAsync(Result.Ok(embedding));
 
-        var expectedMemorygram = memorygram with { VectorEmbedding = embedding };
+        var expectedMemorygram = memorygram with {
+            TopicalEmbedding = embedding,
+            ContentEmbedding = embedding,
+            ContextEmbedding = embedding,
+            MetadataEmbedding = embedding
+        };
 
         _repositoryMock
             .Setup(r => r.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(m =>
                 m.Id == memorygram.Id &&
                 m.Content == memorygram.Content &&
-                m.VectorEmbedding == embedding &&
-                m.Source == memorygram.Source && // Added Source assertion
-                m.Timestamp == memorygram.Timestamp))) // Added Timestamp assertion
+                m.TopicalEmbedding == embedding &&
+                m.ContentEmbedding == embedding &&
+                m.ContextEmbedding == embedding &&
+                m.MetadataEmbedding == embedding &&
+                m.Source == memorygram.Source &&
+                m.Timestamp == memorygram.Timestamp)))
             .ReturnsAsync(Result.Ok(expectedMemorygram));
 
         // Act
@@ -74,7 +85,10 @@ public class MemorygramServiceTests
             r => r.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(m =>
                 m.Id == memorygram.Id &&
                 m.Content == memorygram.Content &&
-                m.VectorEmbedding == embedding)),
+                m.TopicalEmbedding == embedding &&
+                m.ContentEmbedding == embedding &&
+                m.ContextEmbedding == embedding &&
+                m.MetadataEmbedding == embedding)),
             Times.Once);
     }
 
@@ -86,9 +100,12 @@ public class MemorygramServiceTests
             Guid.NewGuid(),
             "Test content",
             MemorygramType.UserInput,
-            Array.Empty<float>(),
-            "Test", // Added Source
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), // Added Timestamp
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
+            "Test",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 

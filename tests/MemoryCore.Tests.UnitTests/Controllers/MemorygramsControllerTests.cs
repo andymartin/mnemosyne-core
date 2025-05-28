@@ -47,11 +47,18 @@ public class MemorygramsControllerTests
                     expectedGuid,
                     arg.Content,
                     arg.Type,
-                    arg.VectorEmbedding,
+                    arg.TopicalEmbedding,
+                    arg.ContentEmbedding,
+                    arg.ContextEmbedding,
+                    arg.MetadataEmbedding,
                     arg.Source,
                     arg.Timestamp,
                     arg.CreatedAt,
-                    arg.UpdatedAt
+                    arg.UpdatedAt,
+                    arg.ChatId,
+                    arg.PreviousMemorygramId,
+                    arg.NextMemorygramId,
+                    arg.Sequence
                 ));
             });
 
@@ -59,11 +66,18 @@ public class MemorygramsControllerTests
             expectedGuid,
             request.Content,
             request.Type,
-            Array.Empty<float>(),
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
             "User",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.CreateOrUpdateMemorygramAsync(Arg.Any<Memorygram>())
@@ -108,7 +122,7 @@ public class MemorygramsControllerTests
     }
 
     [Fact]
-    public async Task CreateMemorygram_WithNullVectorEmbedding_UsesEmptyArray()
+    public async Task CreateMemorygram_WithNullEmbeddings_UsesEmptyArrays()
     {
         // Arrange
         var request = new CreateMemorygramRequest
@@ -127,11 +141,18 @@ public class MemorygramsControllerTests
                     expectedGuid,
                     arg.Content,
                     arg.Type,
-                    arg.VectorEmbedding,
+                    arg.TopicalEmbedding,
+                    arg.ContentEmbedding,
+                    arg.ContextEmbedding,
+                    arg.MetadataEmbedding,
                     arg.Source,
                     arg.Timestamp,
                     arg.CreatedAt,
-                    arg.UpdatedAt
+                    arg.UpdatedAt,
+                    arg.ChatId,
+                    arg.PreviousMemorygramId,
+                    arg.NextMemorygramId,
+                    arg.Sequence
                 ));
             });
 
@@ -143,7 +164,10 @@ public class MemorygramsControllerTests
 
         await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
             m.Content == request.Content &&
-            m.VectorEmbedding.Length == 0));
+            m.TopicalEmbedding.Length == 0 &&
+            m.ContentEmbedding.Length == 0 &&
+            m.ContextEmbedding.Length == 0 &&
+            m.MetadataEmbedding.Length == 0));
     }
 
     [Fact]
@@ -177,11 +201,18 @@ public class MemorygramsControllerTests
             id,
             "Test content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "TestSource",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -254,22 +285,36 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         var updatedMemorygram = new Memorygram(
             guidId,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding,
+            existingMemorygram.TopicalEmbedding,
+            existingMemorygram.ContentEmbedding,
+            existingMemorygram.ContextEmbedding,
+            existingMemorygram.MetadataEmbedding,
             existingMemorygram.Source,
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            existingMemorygram.ChatId,
+            existingMemorygram.PreviousMemorygramId,
+            existingMemorygram.NextMemorygramId,
+            existingMemorygram.Sequence
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -358,11 +403,18 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -407,11 +459,18 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -445,22 +504,36 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         var patchedMemorygram = new Memorygram(
             guidId,
             request.Content,
             request.Type,
-            existingMemorygram.VectorEmbedding,
+            existingMemorygram.TopicalEmbedding,
+            existingMemorygram.ContentEmbedding,
+            existingMemorygram.ContextEmbedding,
+            existingMemorygram.MetadataEmbedding,
             existingMemorygram.Source,
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            existingMemorygram.ChatId,
+            existingMemorygram.PreviousMemorygramId,
+            existingMemorygram.NextMemorygramId,
+            existingMemorygram.Sequence
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -482,7 +555,10 @@ public class MemorygramsControllerTests
         await _memorygramService.Received(1).CreateOrUpdateMemorygramAsync(Arg.Is<Memorygram>(m =>
             m.Id == guidId &&
             m.Content == request.Content &&
-            m.VectorEmbedding == existingMemorygram.VectorEmbedding &&
+            m.TopicalEmbedding == existingMemorygram.TopicalEmbedding &&
+            m.ContentEmbedding == existingMemorygram.ContentEmbedding &&
+            m.ContextEmbedding == existingMemorygram.ContextEmbedding &&
+            m.MetadataEmbedding == existingMemorygram.MetadataEmbedding &&
             m.Source == existingMemorygram.Source &&
             m.Timestamp == existingMemorygram.Timestamp));
     }
@@ -550,11 +626,18 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -599,11 +682,18 @@ public class MemorygramsControllerTests
             guidId,
             "Original content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "OriginalSource",
             DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddDays(-1)
+            DateTimeOffset.UtcNow.AddDays(-1),
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(id)
@@ -637,22 +727,36 @@ public class MemorygramsControllerTests
             sourceId,
             "Source content",
             MemorygramType.UserInput,
-            Array.Empty<float>(),
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
             "Source",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         var targetMemorygram = new Memorygram(
             targetId,
             "Target content",
             MemorygramType.UserInput,
-            Array.Empty<float>(),
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
             "Target",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
@@ -769,11 +873,18 @@ public class MemorygramsControllerTests
             sourceId,
             "Source content",
             MemorygramType.UserInput,
-            Array.Empty<float>(),
+            Array.Empty<float>(), // TopicalEmbedding
+            Array.Empty<float>(), // ContentEmbedding
+            Array.Empty<float>(), // ContextEmbedding
+            Array.Empty<float>(), // MetadataEmbedding
             "Source",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)
@@ -811,22 +922,36 @@ public class MemorygramsControllerTests
             sourceId,
             "Source content",
             MemorygramType.UserInput,
-            new float[] { 0.1f, 0.2f, 0.3f },
+            new float[] { 0.1f, 0.2f, 0.3f }, // TopicalEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContentEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // ContextEmbedding
+            new float[] { 0.1f, 0.2f, 0.3f }, // MetadataEmbedding
             "Source",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         var targetMemorygram = new Memorygram(
             targetId,
             "Target content",
             MemorygramType.UserInput,
-            new float[] { 0.4f, 0.5f, 0.6f },
+            new float[] { 0.4f, 0.5f, 0.6f }, // TopicalEmbedding
+            new float[] { 0.4f, 0.5f, 0.6f }, // ContentEmbedding
+            new float[] { 0.4f, 0.5f, 0.6f }, // ContextEmbedding
+            new float[] { 0.4f, 0.5f, 0.6f }, // MetadataEmbedding
             "Target",
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null,
+            null
         );
 
         _memorygramService.GetMemorygramByIdAsync(sourceId)

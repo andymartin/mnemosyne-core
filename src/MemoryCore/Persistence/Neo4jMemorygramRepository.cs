@@ -31,7 +31,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         MERGE (m:Memorygram {id: $id})
                         ON CREATE SET
                             m.content = $content,
-                            m.vectorEmbedding = $vectorEmbedding,
+                            m.topicalEmbedding = $topicalEmbedding,
+                            m.contentEmbedding = $contentEmbedding,
+                            m.contextEmbedding = $contextEmbedding,
+                            m.metadataEmbedding = $metadataEmbedding,
                             m.type = $type,
                             m.source = $source,
                             m.timestamp = $timestamp,
@@ -43,7 +46,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                             m.updatedAt = datetime()
                         ON MATCH SET
                             m.content = $content,
-                            m.vectorEmbedding = $vectorEmbedding,
+                            m.topicalEmbedding = $topicalEmbedding,
+                            m.contentEmbedding = $contentEmbedding,
+                            m.contextEmbedding = $contextEmbedding,
+                            m.metadataEmbedding = $metadataEmbedding,
                             m.type = $type,
                             m.source = $source,
                             m.timestamp = $timestamp,
@@ -52,13 +58,18 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                             m.nextMemorygramId = $nextMemorygramId,
                             m.sequence = $sequence,
                             m.updatedAt = datetime()
-                        RETURN m.id, m.content, m.vectorEmbedding, m.type, m.source, m.timestamp, m.chatId, m.previousMemorygramId, m.nextMemorygramId, m.sequence, m.createdAt, m.updatedAt";
+                        RETURN m.id, m.content, m.topicalEmbedding, m.contentEmbedding, m.contextEmbedding, m.metadataEmbedding, 
+                               m.type, m.source, m.timestamp, m.chatId, m.previousMemorygramId, m.nextMemorygramId, 
+                               m.sequence, m.createdAt, m.updatedAt";
 
                 var parameters = new
                 {
                     id = memorygram.Id.ToString(),
                     content = memorygram.Content,
-                    vectorEmbedding = memorygram.VectorEmbedding,
+                    topicalEmbedding = memorygram.TopicalEmbedding,
+                    contentEmbedding = memorygram.ContentEmbedding,
+                    contextEmbedding = memorygram.ContextEmbedding,
+                    metadataEmbedding = memorygram.MetadataEmbedding,
                     type = memorygram.Type.ToString(),
                     source = memorygram.Source,
                     timestamp = memorygram.Timestamp,
@@ -76,7 +87,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         Guid.Parse(record["m.id"].As<string>()),
                         record["m.content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["m.type"].As<string>()),
-                        ConvertToFloatArray(record["m.vectorEmbedding"]),
+                        ConvertToFloatArray(record["m.topicalEmbedding"]),
+                        ConvertToFloatArray(record["m.contentEmbedding"]),
+                        ConvertToFloatArray(record["m.contextEmbedding"]),
+                        ConvertToFloatArray(record["m.metadataEmbedding"]),
                         record["m.source"].As<string>(),
                         record["m.timestamp"].As<long>(),
                         ConvertToDateTime(record["m.createdAt"]),
@@ -147,8 +161,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         MATCH (b:Memorygram {id: $toId})
                         MERGE (a)-[r:ASSOCIATED_WITH]->(b)
                         SET r.weight = $weight
-                        RETURN a.id as id, a.content as content, a.vectorEmbedding as vectorEmbedding,
-                               a.type as type, a.source as source, a.timestamp as timestamp, a.createdAt as createdAt, a.updatedAt as updatedAt,
+                        RETURN a.id as id, a.content as content, a.topicalEmbedding as topicalEmbedding,
+                               a.contentEmbedding as contentEmbedding, a.contextEmbedding as contextEmbedding,
+                               a.metadataEmbedding as metadataEmbedding, a.type as type, a.source as source, 
+                               a.timestamp as timestamp, a.createdAt as createdAt, a.updatedAt as updatedAt,
                                a.chatId as chatId, a.previousMemorygramId as previousMemorygramId,
                                a.nextMemorygramId as nextMemorygramId, a.sequence as sequence";
 
@@ -167,7 +183,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         Guid.Parse(record["id"].As<string>()),
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
-                        ConvertToFloatArray(record["vectorEmbedding"]),
+                        ConvertToFloatArray(record["topicalEmbedding"]),
+                        ConvertToFloatArray(record["contentEmbedding"]),
+                        ConvertToFloatArray(record["contextEmbedding"]),
+                        ConvertToFloatArray(record["metadataEmbedding"]),
                         record["source"].As<string>(),
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
@@ -199,8 +218,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
             {
                 var query = @"
                         MATCH (m:Memorygram {id: $id})
-                        RETURN m.id as id, m.content as content, m.vectorEmbedding as vectorEmbedding,
-                               m.type as type, m.source as source, m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
+                        RETURN m.id as id, m.content as content, m.topicalEmbedding as topicalEmbedding,
+                               m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
+                               m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source, 
+                               m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
                                m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
                                m.nextMemorygramId as nextMemorygramId, m.sequence as sequence";
 
@@ -214,7 +235,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         Guid.Parse(record["id"].As<string>()),
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
-                        ConvertToFloatArray(record["vectorEmbedding"]),
+                        ConvertToFloatArray(record["topicalEmbedding"]),
+                        ConvertToFloatArray(record["contentEmbedding"]),
+                        ConvertToFloatArray(record["contextEmbedding"]),
+                        ConvertToFloatArray(record["metadataEmbedding"]),
                         record["source"].As<string>(),
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
@@ -259,7 +283,9 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
                         RETURN node.id AS id, node.content AS content, node.type AS type,
-                               node.vectorEmbedding AS vectorEmbedding, node.source AS source, node.timestamp AS timestamp,
+                               node.topicalEmbedding AS topicalEmbedding, node.contentEmbedding AS contentEmbedding,
+                               node.contextEmbedding AS contextEmbedding, node.metadataEmbedding AS metadataEmbedding,
+                               node.source AS source, node.timestamp AS timestamp,
                                node.createdAt AS createdAt, node.updatedAt AS updatedAt,
                                node.chatId AS chatId, node.previousMemorygramId AS previousMemorygramId,
                                node.nextMemorygramId AS nextMemorygramId, node.sequence AS sequence,
@@ -283,7 +309,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         Guid.Parse(record["id"].As<string>()),
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
-                        ConvertToFloatArray(record["vectorEmbedding"]),
+                        ConvertToFloatArray(record["topicalEmbedding"]),
+                        ConvertToFloatArray(record["contentEmbedding"]),
+                        ConvertToFloatArray(record["contextEmbedding"]),
+                        ConvertToFloatArray(record["metadataEmbedding"]),
                         record["source"].As<string>(),
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
@@ -323,9 +352,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
             {
                 var query = @"
                         MATCH (m:Memorygram {chatId: $chatId})
-                        RETURN m.id as id, m.content as content, m.vectorEmbedding as vectorEmbedding,
-                               m.type as type, m.source as source, m.timestamp as timestamp,
-                               m.createdAt as createdAt, m.updatedAt as updatedAt,
+                        RETURN m.id as id, m.content as content, m.topicalEmbedding as topicalEmbedding,
+                               m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
+                               m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source, 
+                               m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
                                m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
                                m.nextMemorygramId as nextMemorygramId, m.sequence as sequence
                         ORDER BY m.timestamp ASC";
@@ -341,7 +371,10 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         Guid.Parse(record["id"].As<string>()),
                         record["content"].As<string>(),
                         Enum.Parse<MemorygramType>(record["type"].As<string>()),
-                        ConvertToFloatArray(record["vectorEmbedding"]),
+                        ConvertToFloatArray(record["topicalEmbedding"]),
+                        ConvertToFloatArray(record["contentEmbedding"]),
+                        ConvertToFloatArray(record["contextEmbedding"]),
+                        ConvertToFloatArray(record["metadataEmbedding"]),
                         record["source"].As<string>(),
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),

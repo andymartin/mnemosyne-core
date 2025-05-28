@@ -50,9 +50,6 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         
         var messages = ProcessContextIntoMessages(state.Context);
         
-        var maxTokens = _llmOptions.Value.Master.MaxTokens;
-        TruncateMessages(messages, maxTokens);
-        
         if (!messages.Any())
         {
             return Result.Fail<PromptConstructionResult>("Constructed prompt has no messages after truncation.");
@@ -66,7 +63,8 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
             Temperature = 0.7f
         };
 
-        var systemPrompt = messages.FirstOrDefault(m => m.Role == "system")?.Content ?? string.Empty;
+        var systemMessage = messages.FirstOrDefault(m => m.Role == "system");
+        var systemPrompt = systemMessage?.Content ?? string.Empty;
 
         var result = new PromptConstructionResult
         {
@@ -145,68 +143,5 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         return messages;
     }
     
-    private void TruncateMessages(List<ChatMessage> messages, int maxTokens)
-    {
-        int approximateMaxChars = maxTokens * 4;
-        
-        int totalChars = messages.Sum(m => m.Content.Length);
-        
-        if (totalChars <= approximateMaxChars)
-        {
-            return;
-        }
-        
-        var systemMessages = messages.Where(m => m.Role == "system").ToList();
-        
-        var lastUserMessage = messages.LastOrDefault(m => m.Role == "user");
-        
-        var remainingMessages = messages
-            .Where(m => m.Role != "system" && m != lastUserMessage)
-            .ToList();
-            
-        int reservedChars =
-            systemMessages.Sum(m => m.Content.Length) +
-            (lastUserMessage?.Content.Length ?? 0);
-            
-        int remainingChars = approximateMaxChars - reservedChars;
-        
-        if (remainingChars <= 0)
-        {
-            messages.Clear();
-            messages.AddRange(systemMessages);
-            if (lastUserMessage != null)
-            {
-                messages.Add(lastUserMessage);
-            }
-            return;
-        }
-        
-        var messagesToKeep = new List<ChatMessage>();
-        int currentLength = 0;
-        
-        for (int i = remainingMessages.Count - 1; i >= 0; i--)
-        {
-            var message = remainingMessages[i];
-            if (currentLength + message.Content.Length <= remainingChars)
-            {
-                messagesToKeep.Add(message);
-                currentLength += message.Content.Length;
-            }
-            else
-            {
-                break;
-            }
-        }
-        
-        messages.Clear();
-        
-        messages.AddRange(systemMessages);
-        
-        messages.AddRange(messagesToKeep.OrderBy(m => remainingMessages.IndexOf(m)));
-        
-        if (lastUserMessage != null)
-        {
-            messages.Add(lastUserMessage);
-        }
-    }
+    // Truncation logic removed
 }

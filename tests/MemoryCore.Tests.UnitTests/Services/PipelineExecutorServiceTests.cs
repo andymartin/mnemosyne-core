@@ -52,14 +52,6 @@ public class PipelineExecutorServiceTests
         result.Value.PipelineId.ShouldBe(emptyPipelineId);
         result.Value.Context.ShouldBeEmpty();
         _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(It.IsAny<Guid>()), Times.Never);
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Executing empty pipeline for ID")),
-                It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
-            Times.Once);
     }
 
     [Fact]

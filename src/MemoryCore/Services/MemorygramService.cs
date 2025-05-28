@@ -33,10 +33,18 @@ public class MemorygramService : IMemorygramService
                 return Result.Fail<Memorygram>(embeddingResult.Errors);
             }
 
-            // Create a new memorygram with the embedding
-            var memorgramWithEmbedding = memorygram with { VectorEmbedding = embeddingResult.Value };
+            // Create a new memorygram with the embeddings
+            // Note: Currently using the same embedding for all four embedding types
+            // This will be updated in future epics with specialized embedding generation
+            var memorgramWithEmbedding = memorygram with 
+            { 
+                TopicalEmbedding = embeddingResult.Value,
+                ContentEmbedding = embeddingResult.Value,
+                ContextEmbedding = embeddingResult.Value,
+                MetadataEmbedding = embeddingResult.Value
+            };
 
-            // Store the memorygram with its embedding
+            // Store the memorygram with its embeddings
             return await _repository.CreateOrUpdateMemorygramAsync(memorgramWithEmbedding);
         }
         catch (Exception ex)
