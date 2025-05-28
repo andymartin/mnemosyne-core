@@ -22,6 +22,16 @@ public class LanguageModelOptions
     // Backward compatibility methods
     public LanguageModelConfiguration GetConfiguration(string modelName)
     {
+        // Check if modelName is an enum value (Master, Auxiliary)
+        if (Enum.TryParse<LanguageModelType>(modelName, out var modelType) &&
+            DefaultAssignments.TryGetValue(modelType, out var assignedModel) &&
+            !string.IsNullOrEmpty(assignedModel) &&
+            Configurations.TryGetValue(assignedModel, out var assignedConfig))
+        {
+            return assignedConfig;
+        }
+        
+        // Direct lookup in configurations
         if (Configurations.TryGetValue(modelName, out var config))
         {
             return config;

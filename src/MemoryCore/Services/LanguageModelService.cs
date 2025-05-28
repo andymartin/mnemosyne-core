@@ -17,15 +17,18 @@ public class LanguageModelService : ILanguageModelService
 {
     private readonly HttpClient _httpClient;
     private readonly IOptions<LanguageModelOptions> _options;
+    private readonly IOptions<ProviderApiKeyOptions> _apiKeyOptions;
     private readonly ILogger<LanguageModelService> _logger;
 
     public LanguageModelService(
         HttpClient httpClient,
         IOptions<LanguageModelOptions> options,
+        IOptions<ProviderApiKeyOptions> apiKeyOptions,
         ILogger<LanguageModelService> logger)
     {
         _httpClient = httpClient;
         _options = options;
+        _apiKeyOptions = apiKeyOptions;
         _logger = logger;
     }
 
@@ -81,7 +84,34 @@ public class LanguageModelService : ILanguageModelService
             using var requestMessage = new HttpRequestMessage(HttpMethod.Post, fullUrl);
             requestMessage.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
             
-            // Add authorization header
+            // Add authorization header based on provider
+            if (_apiKeyOptions.Value.ApiKeys.TryGetValue(config.Provider, out var apiKey) && !string.IsNullOrEmpty(apiKey))
+            {
+                switch (config.Provider)
+                {
+                    case LlmProvider.Anthropic:
+                        requestMessage.Headers.Add("x-api-key", apiKey);
+                        requestMessage.Headers.Add("anthropic-version", "2023-06-01");
+                        break;
+                    case LlmProvider.OpenRouter:
+                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                        break;
+                    case LlmProvider.OpenAI:
+                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                        break;
+                    case LlmProvider.AzureOpenAI:
+                        requestMessage.Headers.Add("api-key", apiKey);
+                        break;
+                    default:
+                        // For other providers, use Authorization Bearer by default
+                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                        break;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("No API key found for provider {Provider}", config.Provider);
+            }
             
             // Add any additional headers from configuration
             if (config.AdditionalHeaders != null)

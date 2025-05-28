@@ -171,15 +171,18 @@ public partial class Program
         // Configure LanguageModel options
         builder.Services.Configure<LanguageModelOptions>(
             builder.Configuration.GetSection("LanguageModels"));
-            
-        // Configure ProviderApiKey options
-        builder.Services.AddSingleton<IPostConfigureOptions<ProviderApiKeyOptions>>(sp =>
-        {
-            var secureConfig = sp.GetRequiredService<ISecureConfigurationService>();
-            var logger = sp.GetRequiredService<ILogger<Program>>();
-            
-            return new PostConfigureProviderApiKeys(secureConfig, logger);
-        });
+            // Configure ProviderApiKey options
+            builder.Services.Configure<ProviderApiKeyOptions>(
+                builder.Configuration.GetSection(ProviderApiKeyOptions.SectionName));
+                
+            builder.Services.AddSingleton<IPostConfigureOptions<ProviderApiKeyOptions>>(sp =>
+            {
+                var secureConfig = sp.GetRequiredService<ISecureConfigurationService>();
+                var logger = sp.GetRequiredService<ILogger<Program>>();
+                
+                return new PostConfigureProviderApiKeys(secureConfig, logger);
+            });
+    
 
 
         // Add repository and services
