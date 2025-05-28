@@ -8,15 +8,18 @@ public class MemorygramService : IMemorygramService
 {
     private readonly IMemorygramRepository _repository;
     private readonly IEmbeddingService _embeddingService;
+    private readonly ISemanticReformulator _semanticReformulator;
     private readonly ILogger<MemorygramService> _logger;
 
     public MemorygramService(
         IMemorygramRepository repository,
         IEmbeddingService embeddingService,
+        ISemanticReformulator semanticReformulator,
         ILogger<MemorygramService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _semanticReformulator = semanticReformulator ?? throw new ArgumentNullException(nameof(semanticReformulator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -24,34 +27,53 @@ public class MemorygramService : IMemorygramService
     {
         try
         {
-            // Generate embedding for the memorygram content
-            var embeddingResult = await _embeddingService.GetEmbeddingAsync(memorygram.Content);
+            string rawContent = memorygram.Content;
+            Result<MemoryReformulations> reformulationsResult = await _semanticReformulator.ReformulateForStorageAsync(rawContent);
 
-            if (embeddingResult.IsFailed)
+            if (reformulationsResult.IsFailed)
             {
-                _logger.LogError("Failed to generate embedding: {Errors}", string.Join(", ", embeddingResult.Errors));
-                return Result.Fail<Memorygram>(embeddingResult.Errors);
+                _logger.LogError("Failed to reformulate content for memorygram {MemorygramId}: {Errors}", memorygram.Id, reformulationsResult.Errors);
+                return Result.Fail<Memorygram>(reformulationsResult.Errors);
             }
 
-            // Create a new memorygram with the embeddings
-            // Note: Currently using the same embedding for all four embedding types
-            // This will be updated in future epics with specialized embedding generation
-            var memorgramWithEmbedding = memorygram with 
-            { 
-                TopicalEmbedding = embeddingResult.Value,
-                ContentEmbedding = embeddingResult.Value,
-                ContextEmbedding = embeddingResult.Value,
-                MetadataEmbedding = embeddingResult.Value
-            };
-
-            // Store the memorygram with its embeddings
-            return await _repository.CreateOrUpdateMemorygramAsync(memorgramWithEmbedding);
+            MemoryReformulations reformulations = reformulationsResult.Value;
+            memorygram = await PopulateEmbeddingsAsync(memorygram, reformulations);
+            
+            return await _repository.CreateOrUpdateMemorygramAsync(memorygram);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Message creating or updating memorygram");
+            _logger.LogError(ex, "Error creating or updating memorygram {MemorygramId}", memorygram.Id);
             return Result.Fail<Memorygram>($"Service error: {ex.Message}");
         }
+    }
+
+    private async Task<Memorygram> PopulateEmbeddingsAsync(Memorygram memorygram, MemoryReformulations reformulations)
+    {
+        foreach (MemoryReformulationType type in Enum.GetValues(typeof(MemoryReformulationType)))
+        {
+            string? reformulatedText = reformulations[type];
+            if (!string.IsNullOrEmpty(reformulatedText))
+            {
+                Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(reformulatedText);
+                if (embeddingResult.IsSuccess)
+                {
+                    memorygram = type switch
+                    {
+                        MemoryReformulationType.Topical => memorygram with { TopicalEmbedding = embeddingResult.Value },
+                        MemoryReformulationType.Content => memorygram with { ContentEmbedding = embeddingResult.Value },
+                        MemoryReformulationType.Context => memorygram with { ContextEmbedding = embeddingResult.Value },
+                        MemoryReformulationType.Metadata => memorygram with { MetadataEmbedding = embeddingResult.Value },
+                        _ => memorygram
+                    };
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to generate embedding for {ReformulationType} of memorygram {MemorygramId}: {Errors}", type, memorygram.Id, embeddingResult.Errors);
+                }
+            }
+        }
+        return memorygram;
     }
 
     public async Task<Result<Memorygram>> CreateAssociationAsync(Guid fromId, Guid toId, float weight)
