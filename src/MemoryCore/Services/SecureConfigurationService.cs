@@ -135,7 +135,6 @@ public class SecureConfigurationService : ISecureConfigurationService
         {
             Name = section.GetValue<string>("Name") ?? name,
             Url = section.GetValue<string>("Url") ?? string.Empty,
-            ApiKey = section.GetValue<string>("ApiKey") ?? string.Empty,
             MaxTokens = section.GetValue<int>("MaxTokens", 4096),
             ModelName = section.GetValue<string>("ModelName") ?? string.Empty,
             Enabled = section.GetValue<bool>("Enabled", true)
@@ -244,8 +243,6 @@ public class SecureConfigurationService : ISecureConfigurationService
         if (element.TryGetProperty("Url", out var url))
             config.Url = url.GetString() ?? config.Url;
         
-        if (element.TryGetProperty("ApiKey", out var apiKey))
-            config.ApiKey = apiKey.GetString() ?? config.ApiKey;
         
         if (element.TryGetProperty("MaxTokens", out var maxTokens))
             config.MaxTokens = maxTokens.GetInt32();
@@ -265,11 +262,6 @@ public class SecureConfigurationService : ISecureConfigurationService
             var config = options.GetConfiguration(modelName);
             
             // Try model-specific API key first
-            var modelKeyResult = GetApiKey(modelName.ToUpper());
-            if (modelKeyResult.IsSuccess)
-            {
-                config.ApiKey = modelKeyResult.Value;
-            }
             
             // Also check provider-specific environment variables
             OverrideProviderApiKey(config);
@@ -282,10 +274,6 @@ public class SecureConfigurationService : ISecureConfigurationService
         var envVarName = $"MNEMOSYNE_{providerName}_API_KEY";
         var apiKey = Environment.GetEnvironmentVariable(envVarName);
         
-        if (!string.IsNullOrEmpty(apiKey))
-        {
-            config.ApiKey = apiKey;
-        }
     }
 
     private Result ValidateModelConfiguration(LanguageModelConfiguration config, string modelType)
@@ -306,10 +294,6 @@ public class SecureConfigurationService : ISecureConfigurationService
             errors.Add($"{modelType}: URL is not a valid URI");
         }
 
-        if (string.IsNullOrEmpty(config.ApiKey))
-        {
-            errors.Add($"{modelType}: API key is required");
-        }
 
         if (config.MaxTokens <= 0)
         {

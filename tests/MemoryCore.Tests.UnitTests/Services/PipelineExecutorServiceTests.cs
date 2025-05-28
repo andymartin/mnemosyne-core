@@ -65,7 +65,7 @@ public class PipelineExecutorServiceTests
             Name = "Test Pipeline",
             Components = new List<ComponentConfiguration>
             {
-                new ComponentConfiguration { Name = "Test Stage", Type = typeof(NullPipelineStage).FullName }
+                new ComponentConfiguration { Name = "Test Stage", Type = typeof(NullPipelineStage).FullName! }
             }
         };
         var request = new PipelineExecutionRequest();

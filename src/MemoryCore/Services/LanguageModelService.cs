@@ -82,10 +82,6 @@ public class LanguageModelService : ILanguageModelService
             requestMessage.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
             
             // Add authorization header
-            if (!string.IsNullOrEmpty(config.ApiKey))
-            {
-                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey);
-            }
             
             // Add any additional headers from configuration
             if (config.AdditionalHeaders != null)

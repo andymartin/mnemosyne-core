@@ -293,9 +293,9 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to generate embedding for response")),
+                It.Is<object>(o => o.ToString()!.Contains("Failed to generate embedding for response")),
                 It.IsAny<Exception?>(),
-                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                (Func<object, Exception?, string>)It.IsAny<object>()),
             Times.Once);
 
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.AtLeastOnce);
@@ -343,9 +343,9 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to create memorygram from response")),
+                It.Is<object>(o => o.ToString()!.Contains("Failed to create memorygram from response")),
                 It.IsAny<Exception?>(),
-                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                (Func<object, Exception?, string>)It.IsAny<object>()),
             Times.Once);
 
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Exactly(2));
@@ -478,9 +478,10 @@ public class ResponderServiceTests
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request });
+        await (Task)method.Invoke(_service, new object[] { response, request })!;
 
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
@@ -524,9 +525,10 @@ public class ResponderServiceTests
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request });
+        await (Task)method.Invoke(_service, new object[] { response, request })!;
 
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
@@ -550,14 +552,15 @@ public class ResponderServiceTests
         var pipelineId = Guid.NewGuid();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
+        // Create a dictionary without the chatId key - this will result in null when GetValueOrDefault is called
         var request = new PipelineExecutionRequest
         {
             PipelineId = pipelineId,
             UserInput = "test input",
             SessionMetadata = new Dictionary<string, object>
             {
-                ["chatId"] = null,
                 ["userId"] = "test-user"
+                // No chatId entry - will return null from GetValueOrDefault
             }
         };
 
@@ -569,9 +572,10 @@ public class ResponderServiceTests
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request });
+        await (Task)method.Invoke(_service, new object[] { response, request })!;
 
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
@@ -610,9 +614,10 @@ public class ResponderServiceTests
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request });
+        await (Task)method.Invoke(_service, new object[] { response, request })!;
 
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()), Times.Never);
@@ -621,9 +626,9 @@ public class ResponderServiceTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Failed to generate embedding for response")),
+                It.Is<object>(o => o.ToString()!.Contains("Failed to generate embedding for response")),
                 It.IsAny<Exception?>(),
-                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                (Func<object, Exception?, string>)It.IsAny<object>()),
             Times.Once);
     }
 
@@ -650,9 +655,10 @@ public class ResponderServiceTests
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method.ShouldNotBeNull();
 
         // Act
-        await (Task)method.Invoke(_service, new object[] { response, request });
+        await (Task)method.Invoke(_service, new object[] { response, request })!;
 
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
