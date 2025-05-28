@@ -100,31 +100,6 @@ public partial class Program
         // Register SecureConfigurationService
         builder.Services.AddSingleton<ISecureConfigurationService, SecureConfigurationService>();
         
-        // Configure LanguageModel options using SecureConfigurationService
-        builder.Services.AddSingleton<LanguageModelOptions>(serviceProvider =>
-        {
-            var secureConfigService = serviceProvider.GetRequiredService<ISecureConfigurationService>();
-            var configResult = secureConfigService.LoadLanguageModelConfiguration();
-            
-            if (configResult.IsFailed)
-            {
-                var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-                logger.LogError("Failed to load language model configuration: {Errors}",
-                    string.Join(", ", configResult.Errors.Select(e => e.Message)));
-                
-                // Return default configuration as fallback
-                return new LanguageModelOptions();
-            }
-            
-            return configResult.Value;
-        });
-        
-        // Also configure as IOptions<LanguageModelOptions> for backward compatibility
-        builder.Services.AddSingleton<IOptions<LanguageModelOptions>>(serviceProvider =>
-        {
-            var options = serviceProvider.GetRequiredService<LanguageModelOptions>();
-            return Options.Create(options);
-        });
 
         // Configure HttpClient for Language Model Service with resilience policies
         builder.Services.AddHttpClient<ILanguageModelService, LanguageModelService>((serviceProvider, client) =>
@@ -160,37 +135,11 @@ public partial class Program
         // Configure LanguageModel options
         builder.Services.Configure<LanguageModelOptions>(
             builder.Configuration.GetSection("LanguageModels"));
+            
+        // Configure ProviderApiKey options
+        builder.Services.Configure<ProviderApiKeyOptions>(
+            builder.Configuration.GetSection(ProviderApiKeyOptions.SectionName));
 
-        // Configure HttpClient for Language Model Service with resilience policies
-        builder.Services.AddHttpClient<ILanguageModelService, LanguageModelService>((serviceProvider, client) =>
-        {
-            // BaseAddress and Authorization are set per-request in LanguageModelService
-            // No need to set them here globally
-        })
-        .AddPolicyHandler((serviceProvider, _) =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value; // Using EmbeddingServiceOptions for retry policy for now
-            return HttpPolicyExtensions
-                .HandleTransientHttpError() // HttpRequestException, 5XX and 408 status codes
-                .Or<TimeoutRejectedException>() // Thrown by Polly's TimeoutPolicy
-                .WaitAndRetryAsync(
-                    options.MaxRetryAttempts,
-                    retryAttempt => TimeSpan.FromMilliseconds(options.RetryDelayMilliseconds * Math.Pow(2, retryAttempt - 1)),
-                    onRetry: (outcome, timespan, retryAttempt, context) =>
-                    {
-                        var logger = serviceProvider.GetRequiredService<ILogger<LanguageModelService>>();
-                        logger.LogWarning(
-                            "Retrying request to Language Model Service after {RetryAttempt} attempts due to {StatusCode}: {Message}",
-                            retryAttempt,
-                            outcome.Result?.StatusCode,
-                            outcome.Exception?.Message);
-                    });
-        })
-        .AddPolicyHandler((serviceProvider, _) =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptions<EmbeddingServiceOptions>>().Value; // Using EmbeddingServiceOptions for timeout for now
-            return Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(options.TimeoutSeconds));
-        });
 
         // Add repository and services
         builder.Services.AddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
