@@ -210,4 +210,279 @@ public class MemorygramServiceTests
 
         _repositoryMock.Verify(r => r.CreateOrUpdateMemorygramAsync(expectedMemorygramAfterEmbeddings), Times.Once);
     }
+
+    [Fact]
+    public async Task CreateRelationshipAsync_ReturnsSuccess_WhenValidParameters()
+    {
+        // Arrange
+        var fromId = Guid.NewGuid();
+        var toId = Guid.NewGuid();
+        var relationshipType = "RELATED_TO";
+        var weight = 0.85f;
+        var properties = "{\"category\": \"test\"}";
+        
+        var expectedRelationship = new GraphRelationship(
+            Guid.NewGuid(),
+            fromId,
+            toId,
+            relationshipType,
+            weight,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            properties,
+            true
+        );
+
+        _repositoryMock
+            .Setup(r => r.CreateRelationshipAsync(fromId, toId, relationshipType, weight, properties))
+            .ReturnsAsync(Result.Ok(expectedRelationship));
+
+        // Act
+        var result = await _service.CreateRelationshipAsync(fromId, toId, relationshipType, weight, properties);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedRelationship, result.Value);
+        _repositoryMock.Verify(r => r.CreateRelationshipAsync(fromId, toId, relationshipType, weight, properties), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateRelationshipAsync_ReturnsFailure_WhenRelationshipTypeIsEmpty()
+    {
+        // Arrange
+        var fromId = Guid.NewGuid();
+        var toId = Guid.NewGuid();
+        var relationshipType = "";
+        var weight = 0.85f;
+
+        // Act
+        var result = await _service.CreateRelationshipAsync(fromId, toId, relationshipType, weight);
+
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Relationship type cannot be null or empty", result.Errors[0].Message);
+        _repositoryMock.Verify(r => r.CreateRelationshipAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<float>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateRelationshipAsync_ReturnsFailure_WhenWeightIsOutOfRange()
+    {
+        // Arrange
+        var fromId = Guid.NewGuid();
+        var toId = Guid.NewGuid();
+        var relationshipType = "RELATED_TO";
+        var weight = 1.5f; // Invalid weight
+
+        // Act
+        var result = await _service.CreateRelationshipAsync(fromId, toId, relationshipType, weight);
+
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Weight must be between 0 and 1", result.Errors[0].Message);
+        _repositoryMock.Verify(r => r.CreateRelationshipAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<float>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRelationshipAsync_ReturnsSuccess_WhenValidParameters()
+    {
+        // Arrange
+        var relationshipId = Guid.NewGuid();
+        var weight = 0.75f;
+        var properties = "{\"updated\": true}";
+        var isActive = false;
+
+        var expectedRelationship = new GraphRelationship(
+            relationshipId,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "RELATED_TO",
+            weight,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            properties,
+            isActive
+        );
+
+        _repositoryMock
+            .Setup(r => r.UpdateRelationshipAsync(relationshipId, weight, properties, isActive))
+            .ReturnsAsync(Result.Ok(expectedRelationship));
+
+        // Act
+        var result = await _service.UpdateRelationshipAsync(relationshipId, weight, properties, isActive);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedRelationship, result.Value);
+        _repositoryMock.Verify(r => r.UpdateRelationshipAsync(relationshipId, weight, properties, isActive), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRelationshipAsync_ReturnsFailure_WhenWeightIsOutOfRange()
+    {
+        // Arrange
+        var relationshipId = Guid.NewGuid();
+        var weight = -0.5f; // Invalid weight
+
+        // Act
+        var result = await _service.UpdateRelationshipAsync(relationshipId, weight);
+
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Weight must be between 0 and 1", result.Errors[0].Message);
+        _repositoryMock.Verify(r => r.UpdateRelationshipAsync(It.IsAny<Guid>(), It.IsAny<float?>(), It.IsAny<string>(), It.IsAny<bool?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteRelationshipAsync_ReturnsSuccess_WhenValidId()
+    {
+        // Arrange
+        var relationshipId = Guid.NewGuid();
+
+        _repositoryMock
+            .Setup(r => r.DeleteRelationshipAsync(relationshipId))
+            .ReturnsAsync(Result.Ok());
+
+        // Act
+        var result = await _service.DeleteRelationshipAsync(relationshipId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        _repositoryMock.Verify(r => r.DeleteRelationshipAsync(relationshipId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRelationshipByIdAsync_ReturnsSuccess_WhenValidId()
+    {
+        // Arrange
+        var relationshipId = Guid.NewGuid();
+        var expectedRelationship = new GraphRelationship(
+            relationshipId,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "SIMILAR_TO",
+            0.9f,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow
+        );
+
+        _repositoryMock
+            .Setup(r => r.GetRelationshipByIdAsync(relationshipId))
+            .ReturnsAsync(Result.Ok(expectedRelationship));
+
+        // Act
+        var result = await _service.GetRelationshipByIdAsync(relationshipId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedRelationship, result.Value);
+        _repositoryMock.Verify(r => r.GetRelationshipByIdAsync(relationshipId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRelationshipsByMemorygramIdAsync_ReturnsSuccess_WhenValidId()
+    {
+        // Arrange
+        var memorygramId = Guid.NewGuid();
+        var relationships = new List<GraphRelationship>
+        {
+            new(Guid.NewGuid(), memorygramId, Guid.NewGuid(), "CONNECTS_TO", 0.8f, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            new(Guid.NewGuid(), Guid.NewGuid(), memorygramId, "RELATES_TO", 0.7f, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)
+        };
+
+        _repositoryMock
+            .Setup(r => r.GetRelationshipsByMemorygramIdAsync(memorygramId, true, true))
+            .ReturnsAsync(Result.Ok<IEnumerable<GraphRelationship>>(relationships));
+
+        // Act
+        var result = await _service.GetRelationshipsByMemorygramIdAsync(memorygramId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(relationships, result.Value);
+        _repositoryMock.Verify(r => r.GetRelationshipsByMemorygramIdAsync(memorygramId, true, true), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRelationshipsByTypeAsync_ReturnsSuccess_WhenValidType()
+    {
+        // Arrange
+        var relationshipType = "SIMILAR_TO";
+        var relationships = new List<GraphRelationship>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), relationshipType, 0.8f, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), relationshipType, 0.9f, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)
+        };
+
+        _repositoryMock
+            .Setup(r => r.GetRelationshipsByTypeAsync(relationshipType))
+            .ReturnsAsync(Result.Ok<IEnumerable<GraphRelationship>>(relationships));
+
+        // Act
+        var result = await _service.GetRelationshipsByTypeAsync(relationshipType);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(relationships, result.Value);
+        _repositoryMock.Verify(r => r.GetRelationshipsByTypeAsync(relationshipType), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRelationshipsByTypeAsync_ReturnsFailure_WhenTypeIsEmpty()
+    {
+        // Arrange
+        var relationshipType = "";
+
+        // Act
+        var result = await _service.GetRelationshipsByTypeAsync(relationshipType);
+
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Relationship type cannot be null or empty", result.Errors[0].Message);
+        _repositoryMock.Verify(r => r.GetRelationshipsByTypeAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task FindRelationshipsAsync_ReturnsSuccess_WhenValidCriteria()
+    {
+        // Arrange
+        var fromId = Guid.NewGuid();
+        var toId = Guid.NewGuid();
+        var relationshipType = "CONNECTS_TO";
+        var minWeight = 0.5f;
+        var maxWeight = 0.9f;
+        var isActive = true;
+
+        var relationships = new List<GraphRelationship>
+        {
+            new(Guid.NewGuid(), fromId, toId, relationshipType, 0.7f, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null, isActive)
+        };
+
+        _repositoryMock
+            .Setup(r => r.FindRelationshipsAsync(fromId, toId, relationshipType, minWeight, maxWeight, isActive))
+            .ReturnsAsync(Result.Ok<IEnumerable<GraphRelationship>>(relationships));
+
+        // Act
+        var result = await _service.FindRelationshipsAsync(fromId, toId, relationshipType, minWeight, maxWeight, isActive);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(relationships, result.Value);
+        _repositoryMock.Verify(r => r.FindRelationshipsAsync(fromId, toId, relationshipType, minWeight, maxWeight, isActive), Times.Once);
+    }
+
+    [Fact]
+    public async Task FindRelationshipsAsync_ReturnsFailure_WhenMinWeightGreaterThanMaxWeight()
+    {
+        // Arrange
+        var minWeight = 0.9f;
+        var maxWeight = 0.5f; // Invalid range
+
+        // Act
+        var result = await _service.FindRelationshipsAsync(minWeight: minWeight, maxWeight: maxWeight);
+
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Contains("Minimum weight cannot be greater than maximum weight", result.Errors[0].Message);
+        _repositoryMock.Verify(r => r.FindRelationshipsAsync(It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<float?>(), It.IsAny<float?>(), It.IsAny<bool?>()), Times.Never);
+    }
 }
