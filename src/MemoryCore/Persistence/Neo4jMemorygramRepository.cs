@@ -291,7 +291,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         CALL db.index.vector.queryNodes($indexName, $topK, $queryVector)
                         YIELD node, score
                         WITH node, score
-                        WHERE ($excludeChatIdString IS NULL OR node.ChatId <> $excludeChatIdString)
+                        WHERE ($excludeSubtypeString IS NULL OR node.subtype <> $excludeSubtypeString)
                         RETURN node.id AS id, node.content AS content, node.type AS type,
                                node.topicalEmbedding AS topicalEmbedding, node.contentEmbedding AS contentEmbedding,
                                node.contextEmbedding AS contextEmbedding, node.metadataEmbedding AS metadataEmbedding,
@@ -462,6 +462,448 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         {
             _logger.LogError(ex, "Failed to retrieve chat initiation memorygrams");
             return Result.Fail<IEnumerable<Memorygram>>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<GraphRelationship>> CreateRelationshipAsync(Guid fromId, Guid toId, string relationshipType, float weight, string? properties = null)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            var sourceExists = await session.ExecuteReadAsync(async tx =>
+            {
+                var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
+                var parameters = new { id = fromId.ToString() };
+                var cursor = await tx.RunAsync(query, parameters);
+                if (await cursor.FetchAsync())
+                {
+                    return cursor.Current["exists"].As<bool>();
+                }
+                return false;
+            });
+
+            if (!sourceExists)
+            {
+                _logger.LogWarning("Source Memorygram with ID {Id} not found", fromId);
+                return Result.Fail<GraphRelationship>($"Memorygram with ID {fromId} not found");
+            }
+
+            var targetExists = await session.ExecuteReadAsync(async tx =>
+            {
+                var query = "MATCH (m:Memorygram {id: $id}) RETURN count(m) > 0 as exists";
+                var parameters = new { id = toId.ToString() };
+                var cursor = await tx.RunAsync(query, parameters);
+                if (await cursor.FetchAsync())
+                {
+                    return cursor.Current["exists"].As<bool>();
+                }
+                return false;
+            });
+
+            if (!targetExists)
+            {
+                _logger.LogWarning("Target Memorygram with ID {Id} not found", toId);
+                return Result.Fail<GraphRelationship>($"Memorygram with ID {toId} not found");
+            }
+
+            return await session.ExecuteWriteAsync(async tx =>
+            {
+                var relationshipId = Guid.NewGuid();
+                var query = $@"
+                        MATCH (a:Memorygram {{id: $fromId}})
+                        MATCH (b:Memorygram {{id: $toId}})
+                        CREATE (a)-[r:{relationshipType} {{
+                            id: $relationshipId,
+                            weight: $weight,
+                            properties: $properties,
+                            isActive: $isActive,
+                            createdAt: datetime(),
+                            updatedAt: datetime()
+                        }}]->(b)
+                        RETURN r.id as id, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt";
+
+                var parameters = new
+                {
+                    fromId = fromId.ToString(),
+                    toId = toId.ToString(),
+                    relationshipId = relationshipId.ToString(),
+                    weight,
+                    properties,
+                    isActive = true
+                };
+
+                var cursor = await tx.RunAsync(query, parameters);
+                if (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    return Result.Ok(new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        fromId,
+                        toId,
+                        relationshipType,
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    ));
+                }
+
+                return Result.Fail<GraphRelationship>("Failed to create relationship");
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create relationship between memorygrams {FromId} and {ToId}", fromId, toId);
+            return Result.Fail<GraphRelationship>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<GraphRelationship>> UpdateRelationshipAsync(Guid relationshipId, float? weight = null, string? properties = null, bool? isActive = null)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteWriteAsync(async tx =>
+            {
+                var setClauses = new List<string>();
+                var parameters = new Dictionary<string, object>
+                {
+                    { "relationshipId", relationshipId.ToString() }
+                };
+
+                if (weight.HasValue)
+                {
+                    setClauses.Add("r.weight = $weight");
+                    parameters["weight"] = weight.Value;
+                }
+
+                if (properties != null)
+                {
+                    setClauses.Add("r.properties = $properties");
+                    parameters["properties"] = properties;
+                }
+
+                if (isActive.HasValue)
+                {
+                    setClauses.Add("r.isActive = $isActive");
+                    parameters["isActive"] = isActive.Value;
+                }
+
+                if (setClauses.Count == 0)
+                {
+                    return Result.Fail<GraphRelationship>("No fields to update");
+                }
+
+                setClauses.Add("r.updatedAt = datetime()");
+
+                var query = $@"
+                        MATCH ()-[r {{id: $relationshipId}}]->()
+                        SET {string.Join(", ", setClauses)}
+                        RETURN r.id as id, startNode(r).id as fromId, endNode(r).id as toId,
+                               type(r) as relationshipType, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt";
+
+                var cursor = await tx.RunAsync(query, parameters);
+                if (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    return Result.Ok(new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        Guid.Parse(record["fromId"].As<string>()),
+                        Guid.Parse(record["toId"].As<string>()),
+                        record["relationshipType"].As<string>(),
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    ));
+                }
+
+                _logger.LogWarning("Relationship with ID {Id} not found", relationshipId);
+                return Result.Fail<GraphRelationship>($"Relationship with ID {relationshipId} not found");
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update relationship {RelationshipId}", relationshipId);
+            return Result.Fail<GraphRelationship>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result> DeleteRelationshipAsync(Guid relationshipId)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteWriteAsync(async tx =>
+            {
+                var query = @"
+                        MATCH ()-[r {id: $relationshipId}]->()
+                        DELETE r
+                        RETURN count(r) as deletedCount";
+
+                var parameters = new { relationshipId = relationshipId.ToString() };
+                var cursor = await tx.RunAsync(query, parameters);
+
+                if (await cursor.FetchAsync())
+                {
+                    var deletedCount = cursor.Current["deletedCount"].As<int>();
+                    if (deletedCount > 0)
+                    {
+                        _logger.LogInformation("Deleted relationship {RelationshipId}", relationshipId);
+                        return Result.Ok();
+                    }
+                }
+
+                _logger.LogWarning("Relationship with ID {Id} not found for deletion", relationshipId);
+                return Result.Fail($"Relationship with ID {relationshipId} not found");
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete relationship {RelationshipId}", relationshipId);
+            return Result.Fail($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<GraphRelationship>> GetRelationshipByIdAsync(Guid relationshipId)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var query = @"
+                        MATCH (a)-[r {id: $relationshipId}]->(b)
+                        RETURN r.id as id, a.id as fromId, b.id as toId, type(r) as relationshipType,
+                               r.weight as weight, r.properties as properties, r.isActive as isActive,
+                               r.createdAt as createdAt, r.updatedAt as updatedAt";
+
+                var parameters = new { relationshipId = relationshipId.ToString() };
+                var cursor = await tx.RunAsync(query, parameters);
+
+                if (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    return Result.Ok(new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        Guid.Parse(record["fromId"].As<string>()),
+                        Guid.Parse(record["toId"].As<string>()),
+                        record["relationshipType"].As<string>(),
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    ));
+                }
+
+                _logger.LogWarning("Relationship with ID {Id} not found", relationshipId);
+                return Result.Fail<GraphRelationship>($"Relationship with ID {relationshipId} not found");
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve relationship by ID {Id}", relationshipId);
+            return Result.Fail<GraphRelationship>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> GetRelationshipsByMemorygramIdAsync(Guid memorygramId, bool includeIncoming = true, bool includeOutgoing = true)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var queries = new List<string>();
+                if (includeOutgoing)
+                    queries.Add(@"
+                        MATCH (m:Memorygram {id: $memorygramId})-[r]->(other)
+                        RETURN r.id as id, m.id as fromId, other.id as toId,
+                               type(r) as relationshipType, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt");
+                if (includeIncoming)
+                    queries.Add(@"
+                        MATCH (other)-[r]->(m:Memorygram {id: $memorygramId})
+                        RETURN r.id as id, other.id as fromId, m.id as toId,
+                               type(r) as relationshipType, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt");
+
+                if (queries.Count == 0)
+                {
+                    return Result.Ok<IEnumerable<GraphRelationship>>(Enumerable.Empty<GraphRelationship>());
+                }
+
+                var query = string.Join(" UNION ", queries) + " ORDER BY createdAt DESC";
+
+                var parameters = new { memorygramId = memorygramId.ToString() };
+                var cursor = await tx.RunAsync(query, parameters);
+                var results = new List<GraphRelationship>();
+
+                while (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    var relationship = new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        Guid.Parse(record["fromId"].As<string>()),
+                        Guid.Parse(record["toId"].As<string>()),
+                        record["relationshipType"].As<string>(),
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    );
+                    results.Add(relationship);
+                }
+
+                _logger.LogInformation("Found {Count} relationships for memorygram {MemorygramId}", results.Count, memorygramId);
+                return Result.Ok<IEnumerable<GraphRelationship>>(results);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve relationships for memorygram {MemorygramId}", memorygramId);
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> GetRelationshipsByTypeAsync(string relationshipType)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var query = $@"
+                        MATCH ()-[r:{relationshipType}]->()
+                        RETURN r.id as id, startNode(r).id as fromId, endNode(r).id as toId,
+                               type(r) as relationshipType, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt
+                        ORDER BY r.createdAt DESC";
+
+                var cursor = await tx.RunAsync(query);
+                var results = new List<GraphRelationship>();
+
+                while (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    var relationship = new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        Guid.Parse(record["fromId"].As<string>()),
+                        Guid.Parse(record["toId"].As<string>()),
+                        record["relationshipType"].As<string>(),
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    );
+                    results.Add(relationship);
+                }
+
+                _logger.LogInformation("Found {Count} relationships of type {RelationshipType}", results.Count, relationshipType);
+                return Result.Ok<IEnumerable<GraphRelationship>>(results);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve relationships of type {RelationshipType}", relationshipType);
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Database error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> FindRelationshipsAsync(Guid? fromId = null, Guid? toId = null, string? relationshipType = null, float? minWeight = null, float? maxWeight = null, bool? isActive = null)
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var conditions = new List<string>();
+                var parameters = new Dictionary<string, object>();
+
+                var matchClause = relationshipType != null ? $"()-[r:{relationshipType}]->()" : "()-[r]->()";
+
+                if (fromId.HasValue)
+                {
+                    conditions.Add("startNode(r).id = $fromId");
+                    parameters["fromId"] = fromId.Value.ToString();
+                }
+
+                if (toId.HasValue)
+                {
+                    conditions.Add("endNode(r).id = $toId");
+                    parameters["toId"] = toId.Value.ToString();
+                }
+
+                if (minWeight.HasValue)
+                {
+                    conditions.Add("r.weight >= $minWeight");
+                    parameters["minWeight"] = minWeight.Value;
+                }
+
+                if (maxWeight.HasValue)
+                {
+                    conditions.Add("r.weight <= $maxWeight");
+                    parameters["maxWeight"] = maxWeight.Value;
+                }
+
+                if (isActive.HasValue)
+                {
+                    conditions.Add("r.isActive = $isActive");
+                    parameters["isActive"] = isActive.Value;
+                }
+
+                var whereClause = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
+
+                var query = $@"
+                        MATCH {matchClause}
+                        {whereClause}
+                        RETURN r.id as id, startNode(r).id as fromId, endNode(r).id as toId,
+                               type(r) as relationshipType, r.weight as weight, r.properties as properties,
+                               r.isActive as isActive, r.createdAt as createdAt, r.updatedAt as updatedAt
+                        ORDER BY r.createdAt DESC";
+
+                var cursor = await tx.RunAsync(query, parameters);
+                var results = new List<GraphRelationship>();
+
+                while (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    var relationship = new GraphRelationship(
+                        Guid.Parse(record["id"].As<string>()),
+                        Guid.Parse(record["fromId"].As<string>()),
+                        Guid.Parse(record["toId"].As<string>()),
+                        record["relationshipType"].As<string>(),
+                        record["weight"].As<float>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["properties"].As<string>(),
+                        record["isActive"].As<bool>()
+                    );
+                    results.Add(relationship);
+                }
+
+                _logger.LogInformation("Found {Count} relationships matching criteria", results.Count);
+                return Result.Ok<IEnumerable<GraphRelationship>>(results);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to find relationships with specified criteria");
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Database error: {ex.Message}");
         }
     }
 

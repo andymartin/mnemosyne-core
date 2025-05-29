@@ -69,7 +69,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
         var chatId1 = Guid.NewGuid();
         var chatId2 = Guid.NewGuid();
 
-        // Chat initiation memorygrams (PreviousMemorygramId is null, ChatId is not null)
+        // Chat initiation memorygrams (PreviousMemorygramId is null, subtype is not null)
         var chatInitiation1 = await CreateTestMemorygramAsync("First chat initiation", chatId1, null);
         var chatInitiation2 = await CreateTestMemorygramAsync("Second chat initiation", chatId2, null);
 
@@ -98,7 +98,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
         // Verify they have the correct properties
         foreach (var initiation in chatInitiations)
         {
-            initiation.Subtype.ShouldBeNull(); // Chat initiations don't have a subtype by default
+            initiation.Subtype.ShouldNotBeNull(); // Chat initiations have a subtype (chatId)
             initiation.PreviousMemorygramId.ShouldBeNull();
         }
     }
@@ -154,6 +154,213 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
         result.ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task CreateRelationshipAsync_WithValidParameters_CreatesRelationship()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        var relationshipType = "RELATED_TO";
+        var weight = 0.85f;
+        var properties = "{\"category\": \"test\"}";
+
+        // Act
+        var result = await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, relationshipType, weight, properties);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.FromMemorygramId.ShouldBe(memorygram1.Id);
+        result.Value.ToMemorygramId.ShouldBe(memorygram2.Id);
+        result.Value.RelationshipType.ShouldBe(relationshipType);
+        result.Value.Weight.ShouldBe(weight);
+        result.Value.Properties.ShouldBe(properties);
+        result.Value.IsActive.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CreateRelationshipAsync_WithNonExistentMemorygram_ReturnsFailure()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("Existing memorygram");
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _repository.CreateRelationshipAsync(memorygram1.Id, nonExistentId, "RELATED_TO", 0.5f);
+
+        // Assert
+        result.IsFailed.ShouldBeTrue();
+        result.Errors.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetRelationshipByIdAsync_WithExistingId_ReturnsRelationship()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        
+        var createResult = await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, "CONNECTS_TO", 0.9f);
+        createResult.IsSuccess.ShouldBeTrue();
+        var relationshipId = createResult.Value.Id;
+
+        // Act
+        var result = await _repository.GetRelationshipByIdAsync(relationshipId);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.Id.ShouldBe(relationshipId);
+        result.Value.FromMemorygramId.ShouldBe(memorygram1.Id);
+        result.Value.ToMemorygramId.ShouldBe(memorygram2.Id);
+        result.Value.RelationshipType.ShouldBe("CONNECTS_TO");
+        result.Value.Weight.ShouldBe(0.9f);
+    }
+
+    [Fact]
+    public async Task GetRelationshipsByMemorygramIdAsync_WithExistingRelationships_ReturnsRelationships()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("Central memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Related memorygram 1");
+        var memorygram3 = await CreateTestMemorygramAsync("Related memorygram 2");
+        
+        // Create outgoing relationships
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, "RELATES_TO", 0.8f);
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram3.Id, "CONNECTS_TO", 0.7f);
+        
+        // Create incoming relationship
+        await _repository.CreateRelationshipAsync(memorygram3.Id, memorygram1.Id, "POINTS_TO", 0.6f);
+
+        // Act
+        var result = await _repository.GetRelationshipsByMemorygramIdAsync(memorygram1.Id, true, true);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        
+        var relationships = result.Value.ToList();
+        relationships.Count.ShouldBe(3);
+        
+        // Check that we have both incoming and outgoing relationships
+        relationships.ShouldContain(r => r.FromMemorygramId == memorygram1.Id && r.ToMemorygramId == memorygram2.Id);
+        relationships.ShouldContain(r => r.FromMemorygramId == memorygram1.Id && r.ToMemorygramId == memorygram3.Id);
+        relationships.ShouldContain(r => r.FromMemorygramId == memorygram3.Id && r.ToMemorygramId == memorygram1.Id);
+    }
+
+    [Fact]
+    public async Task GetRelationshipsByTypeAsync_WithExistingType_ReturnsRelationships()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        var memorygram3 = await CreateTestMemorygramAsync("Third memorygram");
+        
+        var targetType = "SIMILAR_TO";
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, targetType, 0.9f);
+        await _repository.CreateRelationshipAsync(memorygram2.Id, memorygram3.Id, targetType, 0.8f);
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram3.Id, "DIFFERENT_TYPE", 0.7f);
+
+        // Act
+        var result = await _repository.GetRelationshipsByTypeAsync(targetType);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        
+        var relationships = result.Value.ToList();
+        relationships.Count.ShouldBe(2);
+        relationships.ShouldAllBe(r => r.RelationshipType == targetType);
+    }
+
+    [Fact]
+    public async Task UpdateRelationshipAsync_WithValidParameters_UpdatesRelationship()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        
+        var createResult = await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, "RELATES_TO", 0.5f);
+        createResult.IsSuccess.ShouldBeTrue();
+        var relationshipId = createResult.Value.Id;
+
+        var newWeight = 0.9f;
+        var newProperties = "{\"updated\": true}";
+
+        // Act
+        var result = await _repository.UpdateRelationshipAsync(relationshipId, newWeight, newProperties, false);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.Id.ShouldBe(relationshipId);
+        result.Value.Weight.ShouldBe(newWeight);
+        result.Value.Properties.ShouldBe(newProperties);
+        result.Value.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteRelationshipAsync_WithExistingId_DeletesRelationship()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        
+        var createResult = await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, "TEMP_RELATION", 0.5f);
+        createResult.IsSuccess.ShouldBeTrue();
+        var relationshipId = createResult.Value.Id;
+
+        // Act
+        var deleteResult = await _repository.DeleteRelationshipAsync(relationshipId);
+        
+        // Assert
+        deleteResult.IsSuccess.ShouldBeTrue();
+        
+        // Verify the relationship is gone
+        var getResult = await _repository.GetRelationshipByIdAsync(relationshipId);
+        getResult.IsFailed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task FindRelationshipsAsync_WithCriteria_ReturnsMatchingRelationships()
+    {
+        // Arrange
+        await ClearDatabaseAsync();
+        
+        var memorygram1 = await CreateTestMemorygramAsync("First memorygram");
+        var memorygram2 = await CreateTestMemorygramAsync("Second memorygram");
+        var memorygram3 = await CreateTestMemorygramAsync("Third memorygram");
+        
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram2.Id, "HIGH_WEIGHT", 0.9f);
+        await _repository.CreateRelationshipAsync(memorygram1.Id, memorygram3.Id, "LOW_WEIGHT", 0.3f);
+        await _repository.CreateRelationshipAsync(memorygram2.Id, memorygram3.Id, "MEDIUM_WEIGHT", 0.6f);
+
+        // Act - Find relationships with weight >= 0.5
+        var result = await _repository.FindRelationshipsAsync(minWeight: 0.5f);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        
+        var relationships = result.Value.ToList();
+        relationships.Count.ShouldBe(2);
+        relationships.ShouldAllBe(r => r.Weight >= 0.5f);
+    }
+
     private async Task<Memorygram> CreateTestMemorygramAsync(
         string content, 
         Guid? chatId = null, 
@@ -175,7 +382,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
             timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
-            null, // Subtype parameter (replacing chatId)
+            chatId?.ToString(), // Subtype parameter (using chatId)
             previousMemorygramId,
             null,
             null

@@ -101,4 +101,130 @@ public class MemorygramService : IMemorygramService
             return Result.Fail<Memorygram>($"Service error: {ex.Message}");
         }
     }
+
+    public async Task<Result<GraphRelationship>> CreateRelationshipAsync(Guid fromId, Guid toId, string relationshipType, float weight, string? properties = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(relationshipType))
+            {
+                return Result.Fail<GraphRelationship>("Relationship type cannot be null or empty");
+            }
+
+            if (weight < 0 || weight > 1)
+            {
+                return Result.Fail<GraphRelationship>("Weight must be between 0 and 1");
+            }
+
+            return await _repository.CreateRelationshipAsync(fromId, toId, relationshipType, weight, properties);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating relationship between {FromId} and {ToId}", fromId, toId);
+            return Result.Fail<GraphRelationship>($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<GraphRelationship>> UpdateRelationshipAsync(Guid relationshipId, float? weight = null, string? properties = null, bool? isActive = null)
+    {
+        try
+        {
+            if (weight.HasValue && (weight < 0 || weight > 1))
+            {
+                return Result.Fail<GraphRelationship>("Weight must be between 0 and 1");
+            }
+
+            return await _repository.UpdateRelationshipAsync(relationshipId, weight, properties, isActive);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating relationship {RelationshipId}", relationshipId);
+            return Result.Fail<GraphRelationship>($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result> DeleteRelationshipAsync(Guid relationshipId)
+    {
+        try
+        {
+            return await _repository.DeleteRelationshipAsync(relationshipId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting relationship {RelationshipId}", relationshipId);
+            return Result.Fail($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<GraphRelationship>> GetRelationshipByIdAsync(Guid relationshipId)
+    {
+        try
+        {
+            return await _repository.GetRelationshipByIdAsync(relationshipId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving relationship {RelationshipId}", relationshipId);
+            return Result.Fail<GraphRelationship>($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> GetRelationshipsByMemorygramIdAsync(Guid memorygramId, bool includeIncoming = true, bool includeOutgoing = true)
+    {
+        try
+        {
+            return await _repository.GetRelationshipsByMemorygramIdAsync(memorygramId, includeIncoming, includeOutgoing);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving relationships for memorygram {MemorygramId}", memorygramId);
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> GetRelationshipsByTypeAsync(string relationshipType)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(relationshipType))
+            {
+                return Result.Fail<IEnumerable<GraphRelationship>>("Relationship type cannot be null or empty");
+            }
+
+            return await _repository.GetRelationshipsByTypeAsync(relationshipType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving relationships of type {RelationshipType}", relationshipType);
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Service error: {ex.Message}");
+        }
+    }
+
+    public async Task<Result<IEnumerable<GraphRelationship>>> FindRelationshipsAsync(Guid? fromId = null, Guid? toId = null, string? relationshipType = null, float? minWeight = null, float? maxWeight = null, bool? isActive = null)
+    {
+        try
+        {
+            if (minWeight.HasValue && (minWeight < 0 || minWeight > 1))
+            {
+                return Result.Fail<IEnumerable<GraphRelationship>>("Minimum weight must be between 0 and 1");
+            }
+
+            if (maxWeight.HasValue && (maxWeight < 0 || maxWeight > 1))
+            {
+                return Result.Fail<IEnumerable<GraphRelationship>>("Maximum weight must be between 0 and 1");
+            }
+
+            if (minWeight.HasValue && maxWeight.HasValue && minWeight > maxWeight)
+            {
+                return Result.Fail<IEnumerable<GraphRelationship>>("Minimum weight cannot be greater than maximum weight");
+            }
+
+            return await _repository.FindRelationshipsAsync(fromId, toId, relationshipType, minWeight, maxWeight, isActive);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding relationships with specified criteria");
+            return Result.Fail<IEnumerable<GraphRelationship>>($"Service error: {ex.Message}");
+        }
+    }
 }
