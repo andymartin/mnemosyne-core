@@ -30,4 +30,10 @@ public interface IMemorygramRepository
     /// <param name="chatId">The chat ID to retrieve memorygrams for</param>
     /// <returns>A collection of memorygrams for the specified chat</returns>
     Task<Result<IEnumerable<Memorygram>>> GetByChatIdAsync(string chatId);
+
+    /// <summary>
+    /// Retrieves all chat initiation messages (memorygrams where PreviousMemorygramId is null and ChatId is not null)
+    /// </summary>
+    /// <returns>A collection of memorygrams representing chat initiations</returns>
+    Task<Result<IEnumerable<Memorygram>>> GetAllChatsAsync();
 }

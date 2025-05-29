@@ -409,6 +409,62 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         }
     }
 
+    public async Task<Result<IEnumerable<Memorygram>>> GetAllChatsAsync()
+    {
+        try
+        {
+            await using var session = _driver.AsyncSession();
+
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var query = @"
+                        MATCH (m:Memorygram)
+                        WHERE m.previousMemorygramId IS NULL AND m.chatId IS NOT NULL
+                        RETURN m.id as id, m.content as content, m.topicalEmbedding as topicalEmbedding,
+                               m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
+                               m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source,
+                               m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
+                               m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
+                               m.nextMemorygramId as nextMemorygramId, m.sequence as sequence
+                        ORDER BY m.timestamp DESC";
+
+                var cursor = await tx.RunAsync(query);
+                var results = new List<Memorygram>();
+
+                while (await cursor.FetchAsync())
+                {
+                    var record = cursor.Current;
+                    var memorygram = new Memorygram(
+                        Guid.Parse(record["id"].As<string>()),
+                        record["content"].As<string>(),
+                        Enum.Parse<MemorygramType>(record["type"].As<string>()),
+                        ConvertToFloatArray(record["topicalEmbedding"]),
+                        ConvertToFloatArray(record["contentEmbedding"]),
+                        ConvertToFloatArray(record["contextEmbedding"]),
+                        ConvertToFloatArray(record["metadataEmbedding"]),
+                        record["source"].As<string>(),
+                        record["timestamp"].As<long>(),
+                        ConvertToDateTime(record["createdAt"]),
+                        ConvertToDateTime(record["updatedAt"]),
+                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
+                        record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
+                        record["sequence"].As<int?>()
+                    );
+                    results.Add(memorygram);
+                }
+
+                _logger.LogInformation("Retrieved {Count} chat initiation memorygrams", results.Count);
+                return Result.Ok<IEnumerable<Memorygram>>(results);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve chat initiation memorygrams");
+            return Result.Fail<IEnumerable<Memorygram>>($"Database error: {ex.Message}");
+        }
+    }
+
     private float[] ConvertToFloatArray(object vectorObj)
     {
         if (vectorObj == null)
