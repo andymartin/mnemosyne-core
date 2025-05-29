@@ -11,6 +11,7 @@ namespace MemoryCore.Tests.UnitTests.Services;
 
 public class MemoryQueryServiceTests
 {
+    private readonly Mock<ISemanticReformulator> _mockSemanticReformulator;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IMemorygramRepository> _mockRepository;
     private readonly Mock<ILogger<MemoryQueryService>> _mockLogger;
@@ -20,10 +21,12 @@ public class MemoryQueryServiceTests
     public MemoryQueryServiceTests(ITestOutputHelper output)
     {
         _output = output;
+        _mockSemanticReformulator = new Mock<ISemanticReformulator>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockRepository = new Mock<IMemorygramRepository>();
         _mockLogger = new Mock<ILogger<MemoryQueryService>>();
         _service = new MemoryQueryService(
+            _mockSemanticReformulator.Object,
             _mockEmbeddingService.Object,
             _mockRepository.Object,
             _mockLogger.Object);
@@ -34,6 +37,15 @@ public class MemoryQueryServiceTests
     {
         // Arrange
         var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
+        var reformulations = new MemoryReformulations
+        {
+            Topical = "original",
+            Content = "keyword",
+            Context = "paraphrase",
+            Metadata = "question"
+        };
+        _mockSemanticReformulator.Setup(x => x.ReformulateForQueryAsync(input.QueryText)).ReturnsAsync(Result.Ok(reformulations));
+
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -57,11 +69,11 @@ public class MemoryQueryServiceTests
         };
 
         _mockEmbeddingService
-            .Setup(x => x.GetEmbeddingAsync(input.QueryText))
+            .Setup(x => x.GetEmbeddingAsync(It.IsAny<string>()))
             .ReturnsAsync(Result.Ok(queryVector));
-
+ 
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null))
+            .Setup(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()))
             .ReturnsAsync(Result.Ok(similarMemorygrams.AsEnumerable()));
 
         // Act
@@ -76,8 +88,9 @@ public class MemoryQueryServiceTests
         result.Value.Results.Count.ShouldBe(1);
         result.Value.Message.ShouldBeNull();
 
-        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null), Times.Once);
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
+        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), input.TopK!.Value, null), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
     }
 
     [Fact]
@@ -85,6 +98,15 @@ public class MemoryQueryServiceTests
     {
         // Arrange
         var input = new MemoryQueryInput("test query", null, MemoryReformulationType.Content, null);
+        var reformulations = new MemoryReformulations
+        {
+            Topical = "original",
+            Content = "keyword",
+            Context = "paraphrase",
+            Metadata = "question"
+        };
+        _mockSemanticReformulator.Setup(x => x.ReformulateForQueryAsync(input.QueryText)).ReturnsAsync(Result.Ok(reformulations));
+
         var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
         var similarMemorygrams = new List<MemorygramWithScore>
         {
@@ -108,11 +130,11 @@ public class MemoryQueryServiceTests
         };
 
         _mockEmbeddingService
-            .Setup(x => x.GetEmbeddingAsync(input.QueryText))
+            .Setup(x => x.GetEmbeddingAsync(It.IsAny<string>()))
             .ReturnsAsync(Result.Ok(queryVector));
-
+ 
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, It.IsAny<int>(), null))
+            .Setup(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), null))
             .ReturnsAsync(Result.Ok(similarMemorygrams.AsEnumerable()));
 
         // Act
@@ -125,7 +147,9 @@ public class MemoryQueryServiceTests
         result.Value.Status.ShouldBe("success");
 
         // Verify that a default value was used
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, It.IsAny<int>(), null), Times.Once);
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
+        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), null), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
     }
 
     [Fact]
@@ -143,6 +167,7 @@ public class MemoryQueryServiceTests
         result.Errors.ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("empty");
 
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(It.IsAny<string>()), Times.Never);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
         _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
@@ -162,19 +187,53 @@ public class MemoryQueryServiceTests
         result.Errors.ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("greater than 0");
 
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(It.IsAny<string>()), Times.Never);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
         _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 
     [Fact]
-    public async Task QueryAsync_WhenEmbeddingServiceFails_ReturnsFailResult()
+    public async Task QueryAsync_WhenSemanticReformulatorFails_ReturnsFailResult()
     {
         // Arrange
         var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
-        var errorMessage = "Embedding service error";
+        var errorMessage = "Semantic reformulator error";
+ 
+        _mockSemanticReformulator
+            .Setup(x => x.ReformulateForQueryAsync(input.QueryText))
+            .ReturnsAsync(Result.Fail(new Error(errorMessage)));
 
+        // Act
+        _output.WriteLine("Executing QueryAsync when semantic reformulator fails");
+        var result = await _service.QueryAsync(input);
+
+        // Assert
+        result.IsFailed.ShouldBeTrue();
+        result.Errors.ShouldNotBeEmpty();
+        result.Errors.First().Message.ShouldContain("Failed to reformulate query.");
+
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
+        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task QueryAsync_WhenEmbeddingServiceFails_ReturnsSuccessWithEmptyResults()
+    {
+        // Arrange
+        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
+        var reformulations = new MemoryReformulations
+        {
+            Topical = "original",
+            Content = "keyword",
+            Context = "paraphrase",
+            Metadata = "question"
+        };
+        _mockSemanticReformulator.Setup(x => x.ReformulateForQueryAsync(input.QueryText)).ReturnsAsync(Result.Ok(reformulations));
+        var errorMessage = "Embedding service error for a reformulation";
+ 
         _mockEmbeddingService
-            .Setup(x => x.GetEmbeddingAsync(input.QueryText))
+            .Setup(x => x.GetEmbeddingAsync(It.IsAny<string>()))
             .ReturnsAsync(Result.Fail(new Error(errorMessage)));
 
         // Act
@@ -182,41 +241,15 @@ public class MemoryQueryServiceTests
         var result = await _service.QueryAsync(input);
 
         // Assert
-        result.IsFailed.ShouldBeTrue();
-        result.Errors.ShouldNotBeEmpty();
-        result.Errors.First().Message.ShouldContain(errorMessage);
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.Status.ShouldBe("success");
+        result.Value.Results.ShouldNotBeNull();
+        result.Value.Results.Count.ShouldBe(0); // No results because all embedding calls failed
 
-        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
+        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
         _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task QueryAsync_WhenRepositoryFails_ReturnsFailResult()
-    {
-        // Arrange
-        var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
-        var queryVector = new float[] { 0.1f, 0.2f, 0.3f };
-        var errorMessage = "Repository error";
-
-        _mockEmbeddingService
-            .Setup(x => x.GetEmbeddingAsync(input.QueryText))
-            .ReturnsAsync(Result.Ok(queryVector));
-
-        _mockRepository
-            .Setup(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null))
-            .ReturnsAsync(Result.Fail(new Error(errorMessage)));
-
-        // Act
-        _output.WriteLine("Executing QueryAsync when repository fails");
-        var result = await _service.QueryAsync(input);
-
-        // Assert
-        result.IsFailed.ShouldBeTrue();
-        result.Errors.ShouldNotBeEmpty();
-        result.Errors.First().Message.ShouldContain(errorMessage);
-
-        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
-        _mockRepository.Verify(x => x.FindSimilarAsync(queryVector, MemoryReformulationType.Content, input.TopK!.Value, null), Times.Once);
     }
 
     [Fact]
@@ -225,9 +258,9 @@ public class MemoryQueryServiceTests
         // Arrange
         var input = new MemoryQueryInput("test query", 5, MemoryReformulationType.Content, null);
         var exceptionMessage = "Test exception";
-
-        _mockEmbeddingService
-            .Setup(x => x.GetEmbeddingAsync(input.QueryText))
+ 
+        _mockSemanticReformulator
+            .Setup(x => x.ReformulateForQueryAsync(input.QueryText))
             .ThrowsAsync(new Exception(exceptionMessage));
 
         // Act
@@ -239,7 +272,8 @@ public class MemoryQueryServiceTests
         result.Errors.ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain(exceptionMessage);
 
-        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(input.QueryText), Times.Once);
+        _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
+        _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
         _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
     }
 }

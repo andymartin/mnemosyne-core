@@ -1,6 +1,7 @@
 using FluentResults;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Mnemosyne.Core.Services;
 
@@ -9,6 +10,7 @@ namespace Mnemosyne.Core.Services;
 /// </summary>
 public class MemoryQueryService : IMemoryQueryService
 {
+    private readonly ISemanticReformulator _semanticReformulator;
     private readonly IEmbeddingService _embeddingService;
     private readonly IMemorygramRepository _memorygramRepository;
     private readonly ILogger<MemoryQueryService> _logger;
@@ -17,14 +19,17 @@ public class MemoryQueryService : IMemoryQueryService
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryQueryService"/> class.
     /// </summary>
+    /// <param name="semanticReformulator">The semantic reformulator</param>
     /// <param name="embeddingService">The embedding service</param>
     /// <param name="memorygramRepository">The memorygram repository</param>
     /// <param name="logger">The logger</param>
     public MemoryQueryService(
+        ISemanticReformulator semanticReformulator,
         IEmbeddingService embeddingService,
         IMemorygramRepository memorygramRepository,
         ILogger<MemoryQueryService> logger)
     {
+        _semanticReformulator = semanticReformulator ?? throw new ArgumentNullException(nameof(semanticReformulator));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _memorygramRepository = memorygramRepository ?? throw new ArgumentNullException(nameof(memorygramRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -39,7 +44,6 @@ public class MemoryQueryService : IMemoryQueryService
     {
         try
         {
-            // Validate input
             if (string.IsNullOrWhiteSpace(input.QueryText))
             {
                 return Result.Fail(new Error("Query text cannot be empty"));
@@ -51,39 +55,55 @@ public class MemoryQueryService : IMemoryQueryService
                 return Result.Fail(new Error("TopK must be greater than 0"));
             }
 
-            // Get embedding for query text
-            _logger.LogInformation("Getting embedding for query text: {QueryText}", input.QueryText);
-            Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(input.QueryText);
+            string queryText = input.QueryText;
+            Guid? excludeChatId = input.ExcludeChatId;
 
-            if (embeddingResult.IsFailed)
+            Result<MemoryReformulations> reformulationsResult = await _semanticReformulator.ReformulateForQueryAsync(queryText);
+
+            if (reformulationsResult.IsFailed)
             {
-                string errorMessage = string.Join(", ", embeddingResult.Errors.Select(e => e.Message));
-                _logger.LogError("Failed to get embedding: {ErrorMessage}", errorMessage);
-                return Result.Fail(new Error($"Failed to get embedding: {errorMessage}"));
+                _logger.LogError("Failed to reformulate query: {Errors}", string.Join(", ", reformulationsResult.Errors.Select(e => e.Message)));
+                return Result.Fail(new Error("Failed to reformulate query."));
             }
 
-            float[] queryVector = embeddingResult.Value;
+            MemoryReformulations reformulations = reformulationsResult.Value;
+            List<MemorygramWithScore> allResults = new List<MemorygramWithScore>();
 
-            // Find similar memorygrams
-            _logger.LogInformation("Finding similar memorygrams with topK: {TopK}", topK);
-            Result<IEnumerable<MemorygramWithScore>> similarResult =
-                await _memorygramRepository.FindSimilarAsync(
-                    queryVector,
-                    input.ReformulationType ?? MemoryReformulationType.Content,
-                    topK,
-                    input.ExcludeChatId);
-
-            if (similarResult.IsFailed)
+            foreach (MemoryReformulationType type in Enum.GetValues(typeof(MemoryReformulationType)))
             {
-                string errorMessage = string.Join(", ", similarResult.Errors.Select(e => e.Message));
-                _logger.LogError("Failed to find similar memorygrams: {ErrorMessage}", errorMessage);
-                return Result.Fail(new Error($"Failed to find similar memorygrams: {errorMessage}"));
+                string? reformulatedQueryText = reformulations[type];
+                if (!string.IsNullOrEmpty(reformulatedQueryText))
+                {
+                    Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(reformulatedQueryText);
+                    if (embeddingResult.IsSuccess)
+                    {
+                        Result<IEnumerable<MemorygramWithScore>> repoResult = await _memorygramRepository.FindSimilarAsync(
+                            embeddingResult.Value,
+                            type,
+                            topK,
+                            excludeChatId
+                        );
+                        if (repoResult.IsSuccess && repoResult.Value != null)
+                        {
+                            allResults.AddRange(repoResult.Value);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Repository query failed for reformulation type {Type}: {Errors}", type, string.Join(", ", repoResult.Errors.Select(e => e.Message)));
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Embedding generation failed for reformulation type {Type}: {Errors}", type, string.Join(", ", embeddingResult.Errors.Select(e => e.Message)));
+                    }
+                }
             }
 
-            IEnumerable<MemorygramWithScore> similarMemorygrams = similarResult.Value;
+            var groupedResults = allResults.GroupBy(r => r.Id);
+            var distinctBestResults = groupedResults.Select(g => g.OrderByDescending(r => r.Score).First()).ToList();
+            var finalRankedResults = distinctBestResults.OrderByDescending(r => r.Score).Take(topK).ToList();
 
-            // Convert to result items
-            List<MemorygramResultItem> resultItems = similarMemorygrams
+            List<MemorygramResultItem> resultItems = finalRankedResults
                 .Select(m => new MemorygramResultItem(
                     m.Id,
                     m.Content,
@@ -92,15 +112,12 @@ public class MemoryQueryService : IMemoryQueryService
                     m.UpdatedAt))
                 .ToList();
 
-            _logger.LogInformation("Query returned {Count} results", resultItems.Count);
-
-            // Return success result
             return Result.Ok(new MemoryQueryResult("success", resultItems, null));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Message executing memory query");
-            return Result.Fail(new Error($"Message executing memory query: {ex.Message}"));
+            _logger.LogError(ex, "Error executing memory query");
+            return Result.Fail(new Error($"Error executing memory query: {ex.Message}"));
         }
     }
 
@@ -147,8 +164,9 @@ public class MemoryQueryService : IMemoryQueryService
     /// </summary>
     /// <param name="queryText">The text to find similar memorygrams for</param>
     /// <param name="topK">Number of top results to return (default: 5)</param>
+    /// <param name="excludeChatId">Optional chat ID to exclude memorygrams from</param>
     /// <returns>A result containing similar memorygrams</returns>
-    public async Task<Result<List<MemorygramWithScore>>> QueryMemoryAsync(string queryText, int topK = 5)
+    public async Task<Result<List<MemorygramWithScore>>> QueryMemoryAsync(string queryText, int topK = 5, Guid? excludeChatId = null)
     {
         try
         {
@@ -162,40 +180,53 @@ public class MemoryQueryService : IMemoryQueryService
                 return Result.Fail(new Error("TopK must be greater than 0"));
             }
 
-            _logger.LogInformation("Querying memory for similar content to: {QueryText}", queryText);
+            List<MemorygramWithScore> allResults = new List<MemorygramWithScore>();
 
-            // Get embedding for query text
-            Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(queryText);
+            Result<MemoryReformulations> reformulationsResult = await _semanticReformulator.ReformulateForQueryAsync(queryText);
 
-            if (embeddingResult.IsFailed)
+            if (reformulationsResult.IsFailed)
             {
-                string errorMessage = string.Join(", ", embeddingResult.Errors.Select(e => e.Message));
-                _logger.LogError("Failed to get embedding for memory query: {ErrorMessage}", errorMessage);
-                return Result.Fail(new Error($"Failed to get embedding: {errorMessage}"));
+                _logger.LogError("Failed to reformulate query for QueryMemoryAsync: {Errors}", string.Join(", ", reformulationsResult.Errors.Select(e => e.Message)));
+                return Result.Fail(new Error("Failed to reformulate query for QueryMemoryAsync."));
             }
 
-            float[] queryVector = embeddingResult.Value;
+            MemoryReformulations reformulations = reformulationsResult.Value;
 
-            // Find similar memorygrams
-            Result<IEnumerable<MemorygramWithScore>> similarResult =
-                await _memorygramRepository.FindSimilarAsync(
-                    queryVector,
-                    MemoryReformulationType.Content,
-                    topK);
-
-            if (similarResult.IsFailed)
+            foreach (MemoryReformulationType type in Enum.GetValues(typeof(MemoryReformulationType)))
             {
-                string errorMessage = string.Join(", ", similarResult.Errors.Select(e => e.Message));
-                _logger.LogError("Failed to find similar memorygrams: {ErrorMessage}", errorMessage);
-                return Result.Fail(new Error($"Failed to find similar memorygrams: {errorMessage}"));
+                string? reformulatedQueryText = reformulations[type];
+                if (!string.IsNullOrEmpty(reformulatedQueryText))
+                {
+                    Result<float[]> embeddingResult = await _embeddingService.GetEmbeddingAsync(reformulatedQueryText);
+                    if (embeddingResult.IsSuccess)
+                    {
+                        Result<IEnumerable<MemorygramWithScore>> repoResult = await _memorygramRepository.FindSimilarAsync(
+                            embeddingResult.Value,
+                            type,
+                            topK,
+                            excludeChatId
+                        );
+                        if (repoResult.IsSuccess && repoResult.Value != null)
+                        {
+                            allResults.AddRange(repoResult.Value);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Repository query failed for reformulation type {Type} in QueryMemoryAsync: {Errors}", type, string.Join(", ", repoResult.Errors.Select(e => e.Message)));
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Embedding generation failed for reformulation type {Type} in QueryMemoryAsync: {Errors}", type, string.Join(", ", embeddingResult.Errors.Select(e => e.Message)));
+                    }
+                }
             }
 
-            // Return memorygrams with scores
-            var memorygramsWithScore = similarResult.Value.ToList();
+            var groupedResults = allResults.GroupBy(r => r.Id);
+            var distinctBestResults = groupedResults.Select(g => g.OrderByDescending(r => r.Score).First()).ToList();
+            var finalRankedResults = distinctBestResults.OrderByDescending(r => r.Score).Take(topK).ToList();
 
-            _logger.LogInformation("Memory query returned {Count} similar memorygrams", memorygramsWithScore.Count);
-
-            return Result.Ok(memorygramsWithScore);
+            return Result.Ok(finalRankedResults);
         }
         catch (Exception ex)
         {
