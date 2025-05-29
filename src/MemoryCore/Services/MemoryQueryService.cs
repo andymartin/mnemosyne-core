@@ -81,7 +81,7 @@ public class MemoryQueryService : IMemoryQueryService
                             embeddingResult.Value,
                             type,
                             topK,
-                            excludeChatId
+                            null // No longer filtering by chatId, using subtype instead
                         );
                         if (repoResult.IsSuccess && repoResult.Value != null)
                         {
@@ -138,7 +138,7 @@ public class MemoryQueryService : IMemoryQueryService
             _logger.LogInformation("Retrieving chat history for chat ID: {ChatId}", chatId);
 
             // Get memorygrams by chat ID from repository
-            var result = await _memorygramRepository.GetByChatIdAsync(chatId);
+            var result = await _memorygramRepository.GetBySubtypeAsync(chatId);
             
             if (result.IsFailed)
             {
@@ -204,7 +204,7 @@ public class MemoryQueryService : IMemoryQueryService
                             embeddingResult.Value,
                             type,
                             topK,
-                            excludeChatId
+                            null // No longer filtering by chatId, using subtype instead
                         );
                         if (repoResult.IsSuccess && repoResult.Value != null)
                         {

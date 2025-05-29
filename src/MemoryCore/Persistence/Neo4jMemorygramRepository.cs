@@ -38,7 +38,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                             m.type = $type,
                             m.source = $source,
                             m.timestamp = $timestamp,
-                            m.chatId = $chatId,
+                            m.subtype = $subtype,
                             m.previousMemorygramId = $previousMemorygramId,
                             m.nextMemorygramId = $nextMemorygramId,
                             m.sequence = $sequence,
@@ -53,13 +53,13 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                             m.type = $type,
                             m.source = $source,
                             m.timestamp = $timestamp,
-                            m.chatId = $chatId,
+                            m.subtype = $subtype,
                             m.previousMemorygramId = $previousMemorygramId,
                             m.nextMemorygramId = $nextMemorygramId,
                             m.sequence = $sequence,
                             m.updatedAt = datetime()
-                        RETURN m.id, m.content, m.topicalEmbedding, m.contentEmbedding, m.contextEmbedding, m.metadataEmbedding, 
-                               m.type, m.source, m.timestamp, m.chatId, m.previousMemorygramId, m.nextMemorygramId, 
+                        RETURN m.id, m.content, m.topicalEmbedding, m.contentEmbedding, m.contextEmbedding, m.metadataEmbedding,
+                               m.type, m.source, m.timestamp, m.subtype, m.previousMemorygramId, m.nextMemorygramId,
                                m.sequence, m.createdAt, m.updatedAt";
 
                 var parameters = new
@@ -73,7 +73,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                     type = memorygram.Type.ToString(),
                     source = memorygram.Source,
                     timestamp = memorygram.Timestamp,
-                    chatId = memorygram.ChatId?.ToString(),
+                    subtype = memorygram.Subtype,
                     previousMemorygramId = memorygram.PreviousMemorygramId?.ToString(),
                     nextMemorygramId = memorygram.NextMemorygramId?.ToString(),
                     sequence = memorygram.Sequence
@@ -95,7 +95,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["m.timestamp"].As<long>(),
                         ConvertToDateTime(record["m.createdAt"]),
                         ConvertToDateTime(record["m.updatedAt"]),
-                        record["m.chatId"].As<string>() != null ? Guid.Parse(record["m.chatId"].As<string>()) : null,
+                        record["m.subtype"].As<string>(),
                         record["m.previousMemorygramId"].As<string>() != null ? Guid.Parse(record["m.previousMemorygramId"].As<string>()) : null,
                         record["m.nextMemorygramId"].As<string>() != null ? Guid.Parse(record["m.nextMemorygramId"].As<string>()) : null,
                         record["m.sequence"].As<int?>()
@@ -165,7 +165,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                                a.contentEmbedding as contentEmbedding, a.contextEmbedding as contextEmbedding,
                                a.metadataEmbedding as metadataEmbedding, a.type as type, a.source as source, 
                                a.timestamp as timestamp, a.createdAt as createdAt, a.updatedAt as updatedAt,
-                               a.chatId as chatId, a.previousMemorygramId as previousMemorygramId,
+                               a.subtype as subtype, a.previousMemorygramId as previousMemorygramId,
                                a.nextMemorygramId as nextMemorygramId, a.sequence as sequence";
 
                 var parameters = new
@@ -191,7 +191,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["subtype"].As<string>(),
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()
@@ -222,7 +222,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                                m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
                                m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source, 
                                m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
-                               m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
+                               m.subtype as subtype, m.previousMemorygramId as previousMemorygramId,
                                m.nextMemorygramId as nextMemorygramId, m.sequence as sequence";
 
                 var parameters = new { id = id.ToString() };
@@ -243,7 +243,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["subtype"].As<string>(),
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()
@@ -265,7 +265,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         float[] queryVector,
         MemoryReformulationType reformulationType,
         int topK,
-        Guid? excludeChatId = null)
+        string? excludeSubtype = null)
     {
         if (queryVector == null || queryVector.Length == 0)
         {
@@ -297,7 +297,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                                node.contextEmbedding AS contextEmbedding, node.metadataEmbedding AS metadataEmbedding,
                                node.source AS source, node.timestamp AS timestamp,
                                node.createdAt AS createdAt, node.updatedAt AS updatedAt,
-                               node.chatId AS chatId, node.previousMemorygramId AS previousMemorygramId,
+                               node.subtype AS subtype, node.previousMemorygramId AS previousMemorygramId,
                                node.nextMemorygramId AS nextMemorygramId, node.sequence AS sequence,
                                score
                         ORDER BY score DESC";
@@ -307,7 +307,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                     indexName = indexName,
                     topK = topK,
                     queryVector = queryVector,
-                    excludeChatIdString = excludeChatId.HasValue ? excludeChatId.Value.ToString() : null
+                    excludeSubtypeString = excludeSubtype
                 };
 
                 var cursor = await tx.RunAsync(query, parameters);
@@ -328,7 +328,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["subtype"].As<string>(),
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>(),
@@ -348,13 +348,13 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         }
     }
 
-    public async Task<Result<IEnumerable<Memorygram>>> GetByChatIdAsync(string chatId)
+    public async Task<Result<IEnumerable<Memorygram>>> GetBySubtypeAsync(string subtype)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(chatId))
+            if (string.IsNullOrWhiteSpace(subtype))
             {
-                return Result.Fail<IEnumerable<Memorygram>>("Chat ID cannot be null or empty");
+                return Result.Fail<IEnumerable<Memorygram>>("Subtype cannot be null or empty");
             }
 
             await using var session = _driver.AsyncSession();
@@ -362,16 +362,16 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
             return await session.ExecuteReadAsync(async tx =>
             {
                 var query = @"
-                        MATCH (m:Memorygram {chatId: $chatId})
+                        MATCH (m:Memorygram {subtype: $subtype})
                         RETURN m.id as id, m.content as content, m.topicalEmbedding as topicalEmbedding,
                                m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
                                m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source, 
                                m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
-                               m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
+                               m.subtype as subtype, m.previousMemorygramId as previousMemorygramId,
                                m.nextMemorygramId as nextMemorygramId, m.sequence as sequence
                         ORDER BY m.timestamp ASC";
 
-                var parameters = new { chatId = chatId };
+                var parameters = new { subtype = subtype };
                 var cursor = await tx.RunAsync(query, parameters);
                 var results = new List<Memorygram>();
 
@@ -390,7 +390,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["subtype"].As<string>(),
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()
@@ -398,13 +398,13 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                     results.Add(memorygram);
                 }
 
-                _logger.LogInformation("Retrieved {Count} memorygrams for chat {ChatId}", results.Count, chatId);
+                _logger.LogInformation("Retrieved {Count} memorygrams for subtype {Subtype}", results.Count, subtype);
                 return Result.Ok<IEnumerable<Memorygram>>(results);
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve memorygrams for chat {ChatId}", chatId);
+            _logger.LogError(ex, "Failed to retrieve memorygrams for subtype {Subtype}", subtype);
             return Result.Fail<IEnumerable<Memorygram>>($"Database error: {ex.Message}");
         }
     }
@@ -419,12 +419,12 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
             {
                 var query = @"
                         MATCH (m:Memorygram)
-                        WHERE m.previousMemorygramId IS NULL AND m.chatId IS NOT NULL
+                        WHERE m.previousMemorygramId IS NULL AND m.subtype IS NOT NULL
                         RETURN m.id as id, m.content as content, m.topicalEmbedding as topicalEmbedding,
                                m.contentEmbedding as contentEmbedding, m.contextEmbedding as contextEmbedding,
                                m.metadataEmbedding as metadataEmbedding, m.type as type, m.source as source,
                                m.timestamp as timestamp, m.createdAt as createdAt, m.updatedAt as updatedAt,
-                               m.chatId as chatId, m.previousMemorygramId as previousMemorygramId,
+                               m.subtype as subtype, m.previousMemorygramId as previousMemorygramId,
                                m.nextMemorygramId as nextMemorygramId, m.sequence as sequence
                         ORDER BY m.timestamp DESC";
 
@@ -446,7 +446,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                         record["timestamp"].As<long>(),
                         ConvertToDateTime(record["createdAt"]),
                         ConvertToDateTime(record["updatedAt"]),
-                        record["chatId"].As<string>() != null ? Guid.Parse(record["chatId"].As<string>()) : null,
+                        record["subtype"].As<string>(),
                         record["previousMemorygramId"].As<string>() != null ? Guid.Parse(record["previousMemorygramId"].As<string>()) : null,
                         record["nextMemorygramId"].As<string>() != null ? Guid.Parse(record["nextMemorygramId"].As<string>()) : null,
                         record["sequence"].As<int?>()

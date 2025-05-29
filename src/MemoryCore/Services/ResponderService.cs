@@ -204,8 +204,7 @@ public class ResponderService : IResponderService
             Source: "ResponderService",
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
-            UpdatedAt: DateTimeOffset.UtcNow,
-            ChatId: chatId
+            UpdatedAt: DateTimeOffset.UtcNow
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
@@ -235,8 +234,7 @@ public class ResponderService : IResponderService
             Source: "ResponderService",
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
-            UpdatedAt: DateTimeOffset.UtcNow,
-            ChatId: chatId
+            UpdatedAt: DateTimeOffset.UtcNow
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);

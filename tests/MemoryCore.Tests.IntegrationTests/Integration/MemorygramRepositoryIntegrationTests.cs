@@ -98,7 +98,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
         // Verify they have the correct properties
         foreach (var initiation in chatInitiations)
         {
-            initiation.ChatId.ShouldNotBeNull();
+            initiation.Subtype.ShouldBeNull(); // Chat initiations don't have a subtype by default
             initiation.PreviousMemorygramId.ShouldBeNull();
         }
     }
@@ -175,7 +175,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
             timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
-            chatId,
+            null, // Subtype parameter (replacing chatId)
             previousMemorygramId,
             null,
             null

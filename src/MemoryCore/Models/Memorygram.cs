@@ -14,7 +14,7 @@ public record Memorygram(
     long Timestamp,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    Guid? ChatId = null,
+    string? Subtype = null,
     Guid? PreviousMemorygramId = null,
     Guid? NextMemorygramId = null,
     int? Sequence = null

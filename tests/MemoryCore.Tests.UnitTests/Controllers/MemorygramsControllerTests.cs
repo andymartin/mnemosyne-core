@@ -55,7 +55,7 @@ public class MemorygramsControllerTests
                     arg.Timestamp,
                     arg.CreatedAt,
                     arg.UpdatedAt,
-                    arg.ChatId,
+                    arg.Subtype,
                     arg.PreviousMemorygramId,
                     arg.NextMemorygramId,
                     arg.Sequence
@@ -149,7 +149,7 @@ public class MemorygramsControllerTests
                     arg.Timestamp,
                     arg.CreatedAt,
                     arg.UpdatedAt,
-                    arg.ChatId,
+                    arg.Subtype,
                     arg.PreviousMemorygramId,
                     arg.NextMemorygramId,
                     arg.Sequence
@@ -311,7 +311,7 @@ public class MemorygramsControllerTests
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow,
-            existingMemorygram.ChatId,
+            existingMemorygram.Subtype,
             existingMemorygram.PreviousMemorygramId,
             existingMemorygram.NextMemorygramId,
             existingMemorygram.Sequence
@@ -530,7 +530,7 @@ public class MemorygramsControllerTests
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow,
-            existingMemorygram.ChatId,
+            existingMemorygram.Subtype,
             existingMemorygram.PreviousMemorygramId,
             existingMemorygram.NextMemorygramId,
             existingMemorygram.Sequence

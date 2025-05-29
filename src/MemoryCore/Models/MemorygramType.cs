@@ -4,5 +4,7 @@ public enum MemorygramType
 {
     Invalid,
     UserInput,
-    AssistantResponse
+    AssistantResponse,
+    Experience,
+    Reflection
 }

@@ -61,7 +61,7 @@ public class MemoryQueryServiceTests
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
-                Guid.NewGuid(),
+                null,
                 null,
                 null,
                 null,
@@ -73,7 +73,7 @@ public class MemoryQueryServiceTests
             .ReturnsAsync(Result.Ok(queryVector));
  
         _mockRepository
-            .Setup(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()))
+            .Setup(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()))
             .ReturnsAsync(Result.Ok(similarMemorygrams.AsEnumerable()));
 
         // Act
@@ -122,7 +122,7 @@ public class MemoryQueryServiceTests
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
-                Guid.NewGuid(),
+                null,
                 null,
                 null,
                 null,
@@ -169,7 +169,7 @@ public class MemoryQueryServiceTests
 
         _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(It.IsAny<string>()), Times.Never);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class MemoryQueryServiceTests
 
         _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(It.IsAny<string>()), Times.Never);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class MemoryQueryServiceTests
 
         _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class MemoryQueryServiceTests
 
         _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Exactly(Enum.GetValues(typeof(MemoryReformulationType)).Length));
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -274,6 +274,6 @@ public class MemoryQueryServiceTests
 
         _mockSemanticReformulator.Verify(x => x.ReformulateForQueryAsync(input.QueryText), Times.Once);
         _mockEmbeddingService.Verify(x => x.GetEmbeddingAsync(It.IsAny<string>()), Times.Never);
-        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<Guid?>()), Times.Never);
+        _mockRepository.Verify(x => x.FindSimilarAsync(It.IsAny<float[]>(), It.IsAny<MemoryReformulationType>(), It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
     }
 }

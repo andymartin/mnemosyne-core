@@ -301,8 +301,7 @@ public class ResponderServiceTests
                 Source: "ResponderService",
                 Timestamp: DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-1),
-                UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-1),
-                ChatId: chatId
+                UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-1)
             )
         };
 
@@ -379,7 +378,7 @@ public class ResponderServiceTests
         };
 
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, chatIdGuid)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), response, MemorygramType.AssistantResponse, Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
         
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistResponseMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -392,7 +391,6 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.AssistantResponse &&
-                memorygram.ChatId == chatIdGuid &&
                 memorygram.Content == response &&
                 memorygram.TopicalEmbedding.SequenceEqual(Array.Empty<float>()) &&
                 memorygram.ContentEmbedding.SequenceEqual(Array.Empty<float>()) &&
@@ -435,7 +433,6 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.AssistantResponse &&
-                memorygram.ChatId == null &&
                 memorygram.Content == response &&
                 memorygram.TopicalEmbedding.SequenceEqual(Array.Empty<float>()) &&
                 memorygram.ContentEmbedding.SequenceEqual(Array.Empty<float>()) &&
@@ -478,7 +475,6 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.AssistantResponse &&
-                memorygram.ChatId == null &&
                 memorygram.Content == response &&
                 memorygram.TopicalEmbedding.SequenceEqual(Array.Empty<float>()) &&
                 memorygram.ContentEmbedding.SequenceEqual(Array.Empty<float>()) &&
@@ -509,7 +505,7 @@ public class ResponderServiceTests
         };
 
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
-            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null!, null!, null!, null!, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, chatIdGuid)));
+            .ReturnsAsync(Result.Ok(new Memorygram(Guid.NewGuid(), userInput, MemorygramType.UserInput, null!, null!, null!, null!, "ResponderService", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)));
 
         // Use reflection to call the private method
         var method = typeof(ResponderService).GetMethod("PersistUserInputMemory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -522,7 +518,6 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.UserInput &&
-                memorygram.ChatId == chatIdGuid &&
                 memorygram.Content == userInput &&
                 memorygram.TopicalEmbedding.SequenceEqual(Array.Empty<float>()) &&
                 memorygram.ContentEmbedding.SequenceEqual(Array.Empty<float>()) &&
@@ -565,7 +560,6 @@ public class ResponderServiceTests
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(
             It.Is<Memorygram>(memorygram =>
                 memorygram.Type == MemorygramType.UserInput &&
-                memorygram.ChatId == null && // Expect ChatId to be null
                 memorygram.Content == userInput &&
                 memorygram.TopicalEmbedding.SequenceEqual(Array.Empty<float>()) &&
                 memorygram.ContentEmbedding.SequenceEqual(Array.Empty<float>()) &&

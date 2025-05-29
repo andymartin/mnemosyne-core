@@ -172,7 +172,7 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Timestamp, // Preserve existing timestamp
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow,
-            existingMemorygram.ChatId,
+            existingMemorygram.Subtype,
             existingMemorygram.PreviousMemorygramId,
             existingMemorygram.NextMemorygramId,
             existingMemorygram.Sequence
@@ -264,7 +264,7 @@ public class MemorygramsController : ControllerBase
             existingMemorygram.Timestamp,
             existingMemorygram.CreatedAt,
             DateTimeOffset.UtcNow,
-            existingMemorygram.ChatId,
+            existingMemorygram.Subtype,
             existingMemorygram.PreviousMemorygramId,
             existingMemorygram.NextMemorygramId,
             existingMemorygram.Sequence
