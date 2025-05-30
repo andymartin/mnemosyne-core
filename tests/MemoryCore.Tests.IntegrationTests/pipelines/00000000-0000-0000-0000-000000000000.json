@@ -1,0 +1,12 @@
+{
+  "Id": "00000000-0000-0000-0000-000000000000",
+  "Name": "Default Test Pipeline",
+  "Description": "Default pipeline with null stage for integration tests",
+  "Components": [
+    {
+      "Name": "NullStage",
+      "Type": "Mnemosyne.Core.Models.Pipelines.NullPipelineStage",
+      "Config": {}
+    }
+  ]
+}

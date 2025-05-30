@@ -1,0 +1,12 @@
+{
+  "Id": "00000000-0000-0000-0000-000000000000",
+  "Name": "Default Chat Pipeline",
+  "Description": "Default chat pipeline with semantic memory retrieval stage",
+  "Components": [
+    {
+      "Name": "Memory Retrieval",
+      "Type": "Mnemosyne.Core.Models.Pipelines.MemoryRetrievalStage",
+      "Config": {}
+    }
+  ]
+}

@@ -19,8 +19,9 @@ public class PipelinesControllerIntegrationTests
 
     public PipelinesControllerIntegrationTests()
     {
+        var testPipelinesPath = Path.Combine(Directory.GetCurrentDirectory(), "pipelines");
         _factory = new CustomWebApplicationFactory()
-            .WithPipelineStoragePath(Path.Combine(Path.GetTempPath(), "PipelineIntegrationTests", Guid.NewGuid().ToString()));
+            .WithPipelineStoragePath(testPipelinesPath);
         _client = _factory.CreateClient();
         _jsonOptions = _factory.Services.GetRequiredService<JsonSerializerOptions>();
     }
