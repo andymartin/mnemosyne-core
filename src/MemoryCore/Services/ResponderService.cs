@@ -204,7 +204,8 @@ public class ResponderService : IResponderService
             Source: "ResponderService",
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
-            UpdatedAt: DateTimeOffset.UtcNow
+            UpdatedAt: DateTimeOffset.UtcNow,
+            Subtype: chatIdString
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
@@ -215,6 +216,12 @@ public class ResponderService : IResponderService
         else
         {
             _logger.LogInformation("Successfully created memorygram from user input with ID: {MemorygramId}", memorygramResult.Value.Id);
+        }
+
+        // Handle experience creation workflow
+        if (chatId.HasValue)
+        {
+            await HandleExperienceCreationWorkflow(chatIdString!, request.UserInput);
         }
     }
 
@@ -234,7 +241,8 @@ public class ResponderService : IResponderService
             Source: "ResponderService",
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
-            UpdatedAt: DateTimeOffset.UtcNow
+            UpdatedAt: DateTimeOffset.UtcNow,
+            Subtype: chatIdString
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
@@ -245,6 +253,163 @@ public class ResponderService : IResponderService
         else
         {
             _logger.LogInformation("Successfully created memorygram from LLM response with ID: {MemorygramId}", memorygramResult.Value.Id);
+        }
+    }
+
+    private async Task<bool> IsFirstMessageInChat(string chatId)
+    {
+        try
+        {
+            var historyResult = await _memoryQueryService.GetChatHistoryAsync(chatId);
+            if (historyResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to retrieve chat history for experience creation: {Errors}",
+                    string.Join(", ", historyResult.Errors.Select(e => e.Message)));
+                return true; // Assume first message if we can't check history
+            }
+
+            // Count only UserInput and AssistantResponse messages (not Experience messages)
+            var conversationMessages = historyResult.Value
+                .Where(m => m.Type == MemorygramType.UserInput || m.Type == MemorygramType.AssistantResponse)
+                .ToList();
+
+            return conversationMessages.Count <= 1; // First message if only current user input exists
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if first message in chat {ChatId}", chatId);
+            return true; // Assume first message on error
+        }
+    }
+
+    private async Task<Result<Memorygram>> CreateExperienceForChat(string chatId, string userInput)
+    {
+        try
+        {
+            var experienceContent = $"New conversation started with: {userInput}";
+            
+            var experienceMemorygram = new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: experienceContent,
+                Type: MemorygramType.Experience,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId
+            );
+
+            var result = await _memorygramService.CreateOrUpdateMemorygramAsync(experienceMemorygram);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Created new experience for chat {ChatId} with ID: {ExperienceId}",
+                    chatId, result.Value.Id);
+            }
+            else
+            {
+                _logger.LogError("Failed to create experience for chat {ChatId}: {Errors}",
+                    chatId, string.Join(", ", result.Errors.Select(e => e.Message)));
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating experience for chat {ChatId}", chatId);
+            return Result.Fail($"Error creating experience: {ex.Message}");
+        }
+    }
+
+    private async Task<Result> AssociateWithExistingExperience(string chatId, string userInput)
+    {
+        try
+        {
+            // Find existing experiences for this chat
+            var historyResult = await _memoryQueryService.GetChatHistoryAsync(chatId);
+            if (historyResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to retrieve chat history for experience association: {Errors}",
+                    string.Join(", ", historyResult.Errors.Select(e => e.Message)));
+                return Result.Fail("Failed to retrieve chat history");
+            }
+
+            var existingExperiences = historyResult.Value
+                .Where(m => m.Type == MemorygramType.Experience)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToList();
+
+            if (!existingExperiences.Any())
+            {
+                _logger.LogWarning("No existing experience found for chat {ChatId}, creating new one", chatId);
+                var createResult = await CreateExperienceForChat(chatId, userInput);
+                return createResult.IsSuccess ? Result.Ok() : Result.Fail(createResult.Errors);
+            }
+
+            // Use the most recent experience
+            var latestExperience = existingExperiences.First();
+            
+            // Update the experience content to reflect the ongoing conversation
+            var updatedContent = $"{latestExperience.Content}\nContinued with: {userInput}";
+            
+            var updatedExperience = latestExperience with
+            {
+                Content = updatedContent,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
+
+            var updateResult = await _memorygramService.CreateOrUpdateMemorygramAsync(updatedExperience);
+            if (updateResult.IsSuccess)
+            {
+                _logger.LogInformation("Updated existing experience {ExperienceId} for chat {ChatId}",
+                    latestExperience.Id, chatId);
+                return Result.Ok();
+            }
+            else
+            {
+                _logger.LogError("Failed to update experience {ExperienceId} for chat {ChatId}: {Errors}",
+                    latestExperience.Id, chatId, string.Join(", ", updateResult.Errors.Select(e => e.Message)));
+                return Result.Fail(updateResult.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error associating with existing experience for chat {ChatId}", chatId);
+            return Result.Fail($"Error associating with experience: {ex.Message}");
+        }
+    }
+
+    private async Task HandleExperienceCreationWorkflow(string chatId, string userInput)
+    {
+        try
+        {
+            var isFirstMessage = await IsFirstMessageInChat(chatId);
+            
+            if (isFirstMessage)
+            {
+                var createResult = await CreateExperienceForChat(chatId, userInput);
+                if (createResult.IsFailed)
+                {
+                    _logger.LogError("Failed to create experience for new chat {ChatId}: {Errors}",
+                        chatId, string.Join(", ", createResult.Errors.Select(e => e.Message)));
+                }
+            }
+            else
+            {
+                var associateResult = await AssociateWithExistingExperience(chatId, userInput);
+                if (associateResult.IsFailed)
+                {
+                    _logger.LogError("Failed to associate with existing experience for chat {ChatId}: {Errors}",
+                        chatId, string.Join(", ", associateResult.Errors.Select(e => e.Message)));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in experience creation workflow for chat {ChatId}", chatId);
         }
     }
 }

@@ -598,4 +598,441 @@ public class ResponderServiceTests
             It.Is<Memorygram>(memorygram => memorygram.Type == MemorygramType.AssistantResponse)
         ), Times.Once);
     }
+
+    [Fact]
+    public async Task IsFirstMessageInChat_WithEmptyHistory_ShouldReturnTrue()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Ok(new List<Memorygram>()));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("IsFirstMessageInChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<bool>)method.Invoke(_service, new object[] { chatId })!;
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task IsFirstMessageInChat_WithOnlyUserInput_ShouldReturnTrue()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var chatHistory = new List<Memorygram>
+        {
+            new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: "First user message",
+                Type: MemorygramType.UserInput,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId
+            )
+        };
+
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Ok(chatHistory));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("IsFirstMessageInChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<bool>)method.Invoke(_service, new object[] { chatId })!;
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task IsFirstMessageInChat_WithMultipleMessages_ShouldReturnFalse()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var chatHistory = new List<Memorygram>
+        {
+            new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: "First user message",
+                Type: MemorygramType.UserInput,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.AddMinutes(-2).ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-2),
+                UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-2),
+                Subtype: chatId
+            ),
+            new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: "First assistant response",
+                Type: MemorygramType.AssistantResponse,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-1),
+                UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-1),
+                Subtype: chatId
+            )
+        };
+
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Ok(chatHistory));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("IsFirstMessageInChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<bool>)method.Invoke(_service, new object[] { chatId })!;
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task IsFirstMessageInChat_WithHistoryRetrievalFailure_ShouldReturnTrue()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Fail<List<Memorygram>>("Database error"));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("IsFirstMessageInChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<bool>)method.Invoke(_service, new object[] { chatId })!;
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CreateExperienceForChat_ShouldCreateExperienceMemorygram()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var userInput = "Hello, this is my first message";
+        var expectedExperienceId = Guid.NewGuid();
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput) &&
+            mg.Subtype == chatId)))
+            .ReturnsAsync(Result.Ok(new Memorygram(
+                Id: expectedExperienceId,
+                Content: $"New conversation started with: {userInput}",
+                Type: MemorygramType.Experience,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId
+            )));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("CreateExperienceForChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<Result<Memorygram>>)method.Invoke(_service, new object[] { chatId, userInput })!;
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Id.ShouldBe(expectedExperienceId);
+        result.Value.Type.ShouldBe(MemorygramType.Experience);
+        result.Value.Subtype.ShouldBe(chatId);
+        result.Value.Content.ShouldContain(userInput);
+
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput) &&
+            mg.Subtype == chatId &&
+            mg.Source == "ResponderService"
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateExperienceForChat_WithMemorygramServiceFailure_ShouldReturnFailure()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var userInput = "Hello, this is my first message";
+        var errorMessage = "Database connection failed";
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.IsAny<Memorygram>()))
+            .ReturnsAsync(Result.Fail<Memorygram>(errorMessage));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("CreateExperienceForChat", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<Result<Memorygram>>)method.Invoke(_service, new object[] { chatId, userInput })!;
+
+        // Assert
+        result.IsFailed.ShouldBeTrue();
+        result.Errors.ShouldContain(e => e.Message.Contains(errorMessage));
+    }
+
+    [Fact]
+    public async Task AssociateWithExistingExperience_WithExistingExperience_ShouldUpdateExperience()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var userInput = "This is a follow-up message";
+        var existingExperienceId = Guid.NewGuid();
+        var existingContent = "New conversation started with: Hello";
+
+        var existingExperience = new Memorygram(
+            Id: existingExperienceId,
+            Content: existingContent,
+            Type: MemorygramType.Experience,
+            TopicalEmbedding: Array.Empty<float>(),
+            ContentEmbedding: Array.Empty<float>(),
+            ContextEmbedding: Array.Empty<float>(),
+            MetadataEmbedding: Array.Empty<float>(),
+            Source: "ResponderService",
+            Timestamp: DateTimeOffset.UtcNow.AddMinutes(-5).ToUnixTimeSeconds(),
+            CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-5),
+            UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-5),
+            Subtype: chatId
+        );
+
+        var chatHistory = new List<Memorygram> { existingExperience };
+
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Ok(chatHistory));
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Id == existingExperienceId &&
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput))))
+            .ReturnsAsync(Result.Ok(existingExperience with {
+                Content = $"{existingContent}\nContinued with: {userInput}",
+                UpdatedAt = DateTimeOffset.UtcNow
+            }));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("AssociateWithExistingExperience", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<Result>)method.Invoke(_service, new object[] { chatId, userInput })!;
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        _mockMemoryQueryService.Verify(m => m.GetChatHistoryAsync(chatId), Times.Once);
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Id == existingExperienceId &&
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput) &&
+            mg.Content.Contains(existingContent)
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task AssociateWithExistingExperience_WithNoExistingExperience_ShouldCreateNewExperience()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid().ToString();
+        var userInput = "This should create a new experience";
+        var newExperienceId = Guid.NewGuid();
+
+        // No existing experiences in chat history
+        var chatHistory = new List<Memorygram>
+        {
+            new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: "Some user input",
+                Type: MemorygramType.UserInput,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId
+            )
+        };
+
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId))
+            .ReturnsAsync(Result.Ok(chatHistory));
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput))))
+            .ReturnsAsync(Result.Ok(new Memorygram(
+                Id: newExperienceId,
+                Content: $"New conversation started with: {userInput}",
+                Type: MemorygramType.Experience,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId
+            )));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("AssociateWithExistingExperience", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        var result = await (Task<Result>)method.Invoke(_service, new object[] { chatId, userInput })!;
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        _mockMemoryQueryService.Verify(m => m.GetChatHistoryAsync(chatId), Times.Once);
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience &&
+            mg.Content.Contains(userInput)
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistUserInputMemory_WithChatId_ShouldTriggerExperienceWorkflow()
+    {
+        // Arrange
+        var chatId = Guid.NewGuid();
+        var userInput = "Test user input for experience workflow";
+        var request = new PipelineExecutionRequest
+        {
+            UserInput = userInput,
+            SessionMetadata = new Dictionary<string, object> { { "chatId", chatId.ToString() } }
+        };
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Type == MemorygramType.UserInput)))
+            .ReturnsAsync(Result.Ok(new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: userInput,
+                Type: MemorygramType.UserInput,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId.ToString()
+            )));
+
+        // Mock for IsFirstMessageInChat (empty history = first message)
+        _mockMemoryQueryService.Setup(m => m.GetChatHistoryAsync(chatId.ToString()))
+            .ReturnsAsync(Result.Ok(new List<Memorygram>()));
+
+        // Mock for CreateExperienceForChat
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Type == MemorygramType.Experience)))
+            .ReturnsAsync(Result.Ok(new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: $"New conversation started with: {userInput}",
+                Type: MemorygramType.Experience,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow,
+                Subtype: chatId.ToString()
+            )));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("PersistUserInputMemory", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        await (Task)method.Invoke(_service, new object[] { request })!;
+
+        // Assert
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.UserInput &&
+            mg.Subtype == chatId.ToString()
+        )), Times.Once);
+
+        _mockMemoryQueryService.Verify(m => m.GetChatHistoryAsync(chatId.ToString()), Times.Once);
+        
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience &&
+            mg.Subtype == chatId.ToString()
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task PersistUserInputMemory_WithoutChatId_ShouldNotTriggerExperienceWorkflow()
+    {
+        // Arrange
+        var userInput = "Test user input without chat ID";
+        var request = new PipelineExecutionRequest
+        {
+            UserInput = userInput,
+            SessionMetadata = new Dictionary<string, object> { { "userId", "test-user" } }
+        };
+
+        _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg => mg.Type == MemorygramType.UserInput)))
+            .ReturnsAsync(Result.Ok(new Memorygram(
+                Id: Guid.NewGuid(),
+                Content: userInput,
+                Type: MemorygramType.UserInput,
+                TopicalEmbedding: Array.Empty<float>(),
+                ContentEmbedding: Array.Empty<float>(),
+                ContextEmbedding: Array.Empty<float>(),
+                MetadataEmbedding: Array.Empty<float>(),
+                Source: "ResponderService",
+                Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                CreatedAt: DateTimeOffset.UtcNow,
+                UpdatedAt: DateTimeOffset.UtcNow
+            )));
+
+        // Use reflection to call the private method
+        var method = typeof(ResponderService).GetMethod("PersistUserInputMemory", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.ShouldNotBeNull();
+
+        // Act
+        await (Task)method.Invoke(_service, new object[] { request })!;
+
+        // Assert
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.UserInput
+        )), Times.Once);
+
+        // Should not call memory query service for experience workflow
+        _mockMemoryQueryService.Verify(m => m.GetChatHistoryAsync(It.IsAny<string>()), Times.Never);
+        
+        // Should not create experience memorygram
+        _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
+            mg.Type == MemorygramType.Experience
+        )), Times.Never);
+    }
 }
