@@ -81,7 +81,7 @@ public class MemoryQueryService : IMemoryQueryService
                             embeddingResult.Value,
                             type,
                             topK,
-                            null // No longer filtering by chatId, using subtype instead
+                            excludeChatId
                         );
                         if (repoResult.IsSuccess && repoResult.Value != null)
                         {
@@ -204,7 +204,7 @@ public class MemoryQueryService : IMemoryQueryService
                             embeddingResult.Value,
                             type,
                             topK,
-                            null // No longer filtering by chatId, using subtype instead
+                            excludeChatId
                         );
                         if (repoResult.IsSuccess && repoResult.Value != null)
                         {

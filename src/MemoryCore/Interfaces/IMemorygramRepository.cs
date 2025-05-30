@@ -15,13 +15,13 @@ public interface IMemorygramRepository
     /// <param name="queryVector">The vector embedding of the query</param>
     /// <param name="reformulationType">The type of reformulation to use for the query (e.g., Topical, Content)</param>
     /// <param name="topK">The maximum number of results to return</param>
-    /// <param name="excludeSubtype">Optional subtype to exclude memorygrams from</param>
+    /// <param name="excludeChatId">Optional chat ID to exclude memorygrams from</param>
     /// <returns>A collection of Memorygrams with similarity scores</returns>
     Task<Result<IEnumerable<MemorygramWithScore>>> FindSimilarAsync(
         float[] queryVector,
         MemoryReformulationType reformulationType,
         int topK,
-        string? excludeSubtype = null
+        Guid? excludeChatId = null
     );
 
     /// <summary>

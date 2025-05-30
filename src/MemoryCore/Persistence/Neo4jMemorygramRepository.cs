@@ -265,7 +265,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
         float[] queryVector,
         MemoryReformulationType reformulationType,
         int topK,
-        string? excludeSubtype = null)
+        Guid? excludeChatId = null)
     {
         if (queryVector == null || queryVector.Length == 0)
         {
@@ -307,7 +307,7 @@ public class Neo4jMemorygramRepository : IMemorygramRepository
                     indexName = indexName,
                     topK = topK,
                     queryVector = queryVector,
-                    excludeSubtypeString = excludeSubtype
+                    excludeSubtypeString = excludeChatId?.ToString()
                 };
 
                 var cursor = await tx.RunAsync(query, parameters);
