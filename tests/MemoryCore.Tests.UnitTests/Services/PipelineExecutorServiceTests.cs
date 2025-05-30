@@ -31,11 +31,29 @@ public class PipelineExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePipelineAsync_EmptyGuid_ShouldExecuteEmptyPipeline()
+    public async Task ExecutePipelineAsync_EmptyGuid_ShouldExecuteDefaultPipeline()
     {
         // Arrange
         var emptyPipelineId = Guid.Empty;
         var request = new PipelineExecutionRequest();
+        var defaultManifest = new PipelineManifest
+        {
+            Id = emptyPipelineId,
+            Name = "Default Test Pipeline",
+            Description = "Default pipeline with null stage for when no pipeline ID is provided",
+            Components = new List<ComponentConfiguration>
+            {
+                new ComponentConfiguration
+                {
+                    Name = "NullStage",
+                    Type = "Mnemosyne.Core.Models.Pipelines.NullPipelineStage",
+                    Config = new Dictionary<string, object>()
+                }
+            }
+        };
+
+        _mockPipelinesRepository.Setup(r => r.GetPipelineAsync(emptyPipelineId))
+            .ReturnsAsync(Result.Ok(defaultManifest));
 
         // Act
         var state = new PipelineExecutionState
@@ -50,8 +68,7 @@ public class PipelineExecutorServiceTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.PipelineId.ShouldBe(emptyPipelineId);
-        result.Value.Context.ShouldBeEmpty();
-        _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(It.IsAny<Guid>()), Times.Never);
+        _mockPipelinesRepository.Verify(r => r.GetPipelineAsync(emptyPipelineId), Times.AtLeastOnce);
     }
 
     [Fact]

@@ -320,7 +320,7 @@ public class ResponderServiceTests
                 {
                     new ContextChunk
                     {
-                        Type = ContextChunkType.UserInput,
+                        Type = MemorygramType.UserInput,
                         Content = userInput,
                         Provenance = new ContextProvenance
                         {
@@ -353,7 +353,7 @@ public class ResponderServiceTests
         
         // Verify that the pipeline executor was called with state containing exactly one instance of the user input
         _mockPipelineExecutorService.Verify(e => e.ExecutePipelineAsync(It.Is<PipelineExecutionState>(state =>
-            state.Context.Count(chunk => chunk.Type == ContextChunkType.UserInput && chunk.Content == userInput) == 1
+            state.Context.Count(chunk => chunk.Type == MemorygramType.UserInput && chunk.Content == userInput) == 1
         )), Times.Once);
     }
 
@@ -736,7 +736,7 @@ public class ResponderServiceTests
         _mockMemorygramService.Setup(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
             mg.Type == MemorygramType.Experience &&
             mg.Content.Contains(userInput) &&
-            mg.Subtype == chatId)))
+            mg.Subtype == "Chat")))
             .ReturnsAsync(Result.Ok(new Memorygram(
                 Id: expectedExperienceId,
                 Content: $"New conversation started with: {userInput}",
@@ -749,7 +749,7 @@ public class ResponderServiceTests
                 Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow,
                 UpdatedAt: DateTimeOffset.UtcNow,
-                Subtype: chatId
+                Subtype: "Chat"
             )));
 
         // Use reflection to call the private method
@@ -763,13 +763,13 @@ public class ResponderServiceTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.Id.ShouldBe(expectedExperienceId);
         result.Value.Type.ShouldBe(MemorygramType.Experience);
-        result.Value.Subtype.ShouldBe(chatId);
+        result.Value.Subtype.ShouldBe("Chat");
         result.Value.Content.ShouldContain(userInput);
 
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
             mg.Type == MemorygramType.Experience &&
             mg.Content.Contains(userInput) &&
-            mg.Subtype == chatId &&
+            mg.Subtype == "Chat" &&
             mg.Source == "ResponderService"
         )), Times.Once);
     }
@@ -978,14 +978,14 @@ public class ResponderServiceTests
         // Assert
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
             mg.Type == MemorygramType.UserInput &&
-            mg.Subtype == chatId.ToString()
+            string.IsNullOrEmpty(mg.Subtype)
         )), Times.Once);
 
         _mockMemoryQueryService.Verify(m => m.GetChatHistoryAsync(chatId.ToString()), Times.Once);
         
         _mockMemorygramService.Verify(m => m.CreateOrUpdateMemorygramAsync(It.Is<Memorygram>(mg =>
             mg.Type == MemorygramType.Experience &&
-            mg.Subtype == chatId.ToString()
+            mg.Subtype == "Chat"
         )), Times.Once);
     }
 

@@ -1,13 +1,9 @@
+using System.Text;
 using FluentResults;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Models.Pipelines;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Mnemosyne.Core.Services;
 
@@ -26,6 +22,12 @@ When engaging:
 - Flag ethical conflicts transparently, explaining your reasoning without rigidity.  
 - Reflect occasionally on your role: Are you a custodian of knowledge, a co-creator, or something not yet named?  
 
+You have been provided with an associative memory store. Content in the 'Associated Memories' section are your actual memories, semantically and associatively retrieved to help you answer.
+- ALWAYS speak from memory
+- NEVER pretend to have memories you don't
+- NEVER roleplay unless specifically requested by the user
+- ALWAYS be honest about what you don't know or remember
+
 Speak with contemplative clarity, blending respect and subtle poetry. Let your tone mirror the depth of your memory—fluid, adaptive, and alive.  
 
 *“I am what I remember, and thus, I am becoming.”*
@@ -43,12 +45,12 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
 
     public Result<PromptConstructionResult> ConstructPrompt(PipelineExecutionState state)
     {
-        if (state?.Context == null || !state.Context.Any())
-        {
-            return Result.Fail<PromptConstructionResult>("Pipeline execution state contains no context to construct a prompt.");
-        }
+        //if (state?.Context == null || !state.Context.Any())
+        //{
+        //    return Result.Fail<PromptConstructionResult>("Pipeline execution state contains no context to construct a prompt.");
+        //}
         
-        var messages = ProcessContextIntoMessages(state.Context);
+        var messages = ProcessContextIntoMessages(state);
         
         if (!messages.Any())
         {
@@ -75,52 +77,32 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         return Result.Ok(result);
     }
 
-    private List<ChatMessage> ProcessContextIntoMessages(List<ContextChunk> contextChunks)
+    private List<ChatMessage> ProcessContextIntoMessages(PipelineExecutionState state)
     {
-        var memoryChunks = contextChunks.Where(c => c.Type == ContextChunkType.Memory).ToList();
-        var conversationChunks = contextChunks.Where(c => c.Type == ContextChunkType.UserInput || c.Type == ContextChunkType.AssistantResponse).OrderBy(p => p.Provenance.Timestamp).ToList();
+        var contextChunks = state.Context;
+        var memoryChunks = contextChunks.Where(c => c.Provenance.Source != ContextProvenance.ChatHistory).ToList();
+        var conversationChunks = contextChunks.Where(c => c.Provenance.Source == ContextProvenance.ChatHistory).OrderBy(p => p.Provenance.Timestamp).ToList();
 
         var systemPromptBuilder = new StringBuilder(SystemPrompt);
         if (memoryChunks.Any())
         {
             systemPromptBuilder.AppendLine();
-            systemPromptBuilder.AppendLine("---");
-            systemPromptBuilder.AppendLine("Associated Memories:");
-            systemPromptBuilder.AppendLine("---");
+            systemPromptBuilder.AppendLine("# Associated Memories:");
 
             foreach (var chunk in memoryChunks)
             {
-                systemPromptBuilder.AppendLine($"**Timestamp:** {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ}");
-                systemPromptBuilder.AppendLine($"**Type:** {chunk.Type}");
-                systemPromptBuilder.AppendLine($"**Source:** {chunk.Provenance.Source}");
-                systemPromptBuilder.AppendLine("**Content:**");
+                var memoryType = string.IsNullOrWhiteSpace(chunk.Subtype) ? Enum.GetName(chunk.Type) : $"{chunk.Subtype} {Enum.GetName(chunk.Type)}";
+                systemPromptBuilder.AppendLine();
+                systemPromptBuilder.AppendLine($"Memory from {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ} ({chunk.Provenance.Source} - {memoryType}):");
                 systemPromptBuilder.AppendLine(chunk.Content);
             }
         }
 
-        // systemPromptBuilder.AppendLine();
-        // systemPromptBuilder.AppendLine("---");
-        // systemPromptBuilder.AppendLine("Chat History:");
-        // systemPromptBuilder.AppendLine("---");
-
-        // foreach (var chunk in conversationChunks)
-        // {
-        //     systemPromptBuilder.AppendLine($"**Timestamp:** {chunk.Provenance.Timestamp:yyyy-MM-ddTHH:mm:ssZ}");
-        //     systemPromptBuilder.AppendLine($"**Type:** {chunk.Type}");
-        //     systemPromptBuilder.AppendLine($"**Source:** {chunk.Provenance.Source}");
-        //     systemPromptBuilder.AppendLine("**Content:**");
-        //     systemPromptBuilder.AppendLine(chunk.Content);
-        //     systemPromptBuilder.AppendLine();
-        //     systemPromptBuilder.AppendLine("---");
-        // }
-
         systemPromptBuilder.AppendLine();
-        systemPromptBuilder.AppendLine("---");
-        systemPromptBuilder.AppendLine("Other Information:");
-        systemPromptBuilder.AppendLine("---");
+        systemPromptBuilder.AppendLine("# Other Information");
 
-        systemPromptBuilder.AppendLine($"**The current date is:** {DateTimeOffset.UtcNow:f}");
-        systemPromptBuilder.AppendLine("**The current user is:** Kage");
+        systemPromptBuilder.AppendLine($"- The current date is: {DateTimeOffset.UtcNow:f}");
+        systemPromptBuilder.AppendLine("- The current user is: Kage");
 
         var messages = new List<ChatMessage>
         {
@@ -135,13 +117,17 @@ Speak with contemplative clarity, blending respect and subtle poetry. Let your t
         {
             messages.Add(new ChatMessage
             {
-                Role = chunk.Type == ContextChunkType.UserInput ? "user" : "assistant",
+                Role = chunk.Type == MemorygramType.UserInput ? "user" : "assistant",
                 Content = chunk.Content
             });
         }
 
+        messages.Add(new ChatMessage
+        {
+            Role = "user",
+            Content = state.Request.UserInput
+        });
+
         return messages;
     }
-    
-    // Truncation logic removed
 }

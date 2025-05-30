@@ -102,22 +102,22 @@ public class MemoryRetrievalStageTests
         state.Context.Count.ShouldBe(2);
 
         var firstChunk = state.Context[0];
-        firstChunk.Type.ShouldBe(ContextChunkType.Memory);
+        firstChunk.Type.ShouldBe(MemorygramType.UserInput);
         firstChunk.Content.ShouldBe("Test content 1");
         firstChunk.RelevanceScore.ShouldBe(0.9f);
         firstChunk.Provenance.Source.ShouldBe("MemoryRetrievalStage");
         firstChunk.Provenance.OriginalId.ShouldBe(memorygrams[0].Id.ToString());
-        firstChunk.Provenance.Timestamp.ShouldBe(memorygrams[0].UpdatedAt);
+        firstChunk.Provenance.Timestamp.ShouldBe(memorygrams[0].CreatedAt);
         firstChunk.Provenance.Metadata["MemorygramSource"].ShouldBe("Test source 1");
         firstChunk.Provenance.Metadata["MemorygramType"].ShouldBe("UserInput");
 
         var secondChunk = state.Context[1];
-        secondChunk.Type.ShouldBe(ContextChunkType.Memory);
+        secondChunk.Type.ShouldBe(MemorygramType.AssistantResponse);
         secondChunk.Content.ShouldBe("Test content 2");
         secondChunk.RelevanceScore.ShouldBe(0.8f);
         secondChunk.Provenance.Source.ShouldBe("MemoryRetrievalStage");
         secondChunk.Provenance.OriginalId.ShouldBe(memorygrams[1].Id.ToString());
-        secondChunk.Provenance.Timestamp.ShouldBe(memorygrams[1].UpdatedAt);
+        secondChunk.Provenance.Timestamp.ShouldBe(memorygrams[1].CreatedAt);
         secondChunk.Provenance.Metadata["MemorygramSource"].ShouldBe("Test source 2");
         secondChunk.Provenance.Metadata["MemorygramType"].ShouldBe("AssistantResponse");
     }

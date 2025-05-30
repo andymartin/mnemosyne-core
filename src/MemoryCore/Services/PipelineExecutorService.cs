@@ -28,30 +28,17 @@ public class PipelineExecutorService : IPipelineExecutorService
         var pipelineId = state.PipelineId;
         _logger.LogInformation("Attempting to execute pipeline ID: {PipelineId}", pipelineId);
 
-        PipelineManifest manifest;
-        if (pipelineId == Guid.Empty)
+        var manifestResult = await _pipelinesRepository.GetPipelineAsync(pipelineId);
+        if (manifestResult.IsFailed)
         {
-            _logger.LogInformation("Executing empty pipeline for ID: {PipelineId}", pipelineId);
-            manifest = new PipelineManifest
-            {
-                Id = Guid.Empty,
-                Name = "Empty Pipeline",
-                Description = "This is an empty pipeline executed when no specific pipeline ID is provided.",
-                Components = new List<ComponentConfiguration>() // Empty list of components
-            };
+            _logger.LogWarning("Execution failed: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", pipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
+            return Result.Fail<PipelineExecutionState>(manifestResult.Errors);
         }
-        else
-        {
-            var manifestResult = await _pipelinesRepository.GetPipelineAsync(pipelineId);
-            if (manifestResult.IsFailed)
-            {
-                _logger.LogWarning("Execution failed: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", pipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
-                return Result.Fail<PipelineExecutionState>(manifestResult.Errors);
-            }
-            manifest = manifestResult.Value;
-        }
-        var runId = state.RunId;
 
+        var manifest = manifestResult.Value;
+        _logger.LogInformation("Found pipeline {PipelineId}: '{PipelineName}'", pipelineId, manifest.Name);
+
+        var runId = state.RunId;
         var status = new PipelineExecutionStatus
         {
             RunId = runId,
@@ -106,30 +93,17 @@ public class PipelineExecutorService : IPipelineExecutorService
         var runId = state.RunId;
         
         // Get the manifest from the state's PipelineId
-        PipelineManifest manifest;
-        if (state.PipelineId == Guid.Empty)
+        var manifestResult = await _pipelinesRepository.GetPipelineAsync(state.PipelineId);
+        if (manifestResult.IsFailed)
         {
-            manifest = new PipelineManifest
-            {
-                Id = Guid.Empty,
-                Name = "Empty Pipeline",
-                Description = "This is an empty pipeline executed when no specific pipeline ID is provided.",
-                Components = new List<ComponentConfiguration>()
-            };
+            _logger.LogWarning("RunId {RunId}: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", runId, state.PipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
+            status.Status = PipelineStatus.Failed;
+            status.Message = $"Pipeline manifest not found for ID {state.PipelineId}";
+            status.EndTime = DateTimeOffset.UtcNow;
+            return state;
         }
-        else
-        {
-            var manifestResult = await _pipelinesRepository.GetPipelineAsync(state.PipelineId);
-            if (manifestResult.IsFailed)
-            {
-                _logger.LogWarning("RunId {RunId}: Pipeline manifest not found for ID {PipelineId}. Errors: {Errors}", runId, state.PipelineId, string.Join(", ", manifestResult.Errors.Select(e => e.Message)));
-                status.Status = PipelineStatus.Failed;
-                status.Message = $"Pipeline manifest not found for ID {state.PipelineId}";
-                status.EndTime = DateTimeOffset.UtcNow;
-                return state;
-            }
-            manifest = manifestResult.Value;
-        }
+
+        var manifest = manifestResult.Value;
 
         try
         {

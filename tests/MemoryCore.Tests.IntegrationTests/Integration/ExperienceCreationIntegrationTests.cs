@@ -42,6 +42,8 @@ public class ExperienceCreationIntegrationTests : IDisposable
         _scope = _factory.Services.CreateScope();
         _scopedServiceProvider = _scope.ServiceProvider;
         
+        // Pipeline files are automatically copied by CustomWebApplicationFactory
+        
         // Get services from the factory's DI container
         _memoryQueryService = _scopedServiceProvider.GetRequiredService<IMemoryQueryService>();
         _repository = _scopedServiceProvider.GetRequiredService<IMemorygramRepository>();
@@ -108,19 +110,19 @@ public class ExperienceCreationIntegrationTests : IDisposable
         var userInputMemorygram = memorygrams.FirstOrDefault(m => m.Type == MemorygramType.UserInput);
         userInputMemorygram.ShouldNotBeNull();
         userInputMemorygram.Content.ShouldBe(userInput);
-        userInputMemorygram.Subtype.ShouldBe(chatId);
+        userInputMemorygram.Subtype.ShouldBe("Chat");
         
         // Check for assistant response memorygram
         var assistantResponseMemorygram = memorygrams.FirstOrDefault(m => m.Type == MemorygramType.AssistantResponse);
         assistantResponseMemorygram.ShouldNotBeNull();
-        assistantResponseMemorygram.Subtype.ShouldBe(chatId);
+        assistantResponseMemorygram.Subtype.ShouldBe("Chat");
         
         // Check for experience memorygram
         var experienceMemorygram = memorygrams.FirstOrDefault(m => m.Type == MemorygramType.Experience);
         experienceMemorygram.ShouldNotBeNull();
         experienceMemorygram.Content.ShouldContain(userInput);
         experienceMemorygram.Content.ShouldContain("New conversation started with:");
-        experienceMemorygram.Subtype.ShouldBe(chatId);
+        experienceMemorygram.Subtype.ShouldBe("Chat");
         
         _output.WriteLine($"Created experience: {experienceMemorygram.Content}");
     }
@@ -183,7 +185,7 @@ public class ExperienceCreationIntegrationTests : IDisposable
         experience.Content.ShouldContain(secondUserInput);
         experience.Content.ShouldContain("New conversation started with:");
         experience.Content.ShouldContain("Continued with:");
-        experience.Subtype.ShouldBe(chatId);
+        experience.Subtype.ShouldBe("Chat");
         
         _output.WriteLine($"Updated experience: {experience.Content}");
     }
@@ -228,7 +230,7 @@ public class ExperienceCreationIntegrationTests : IDisposable
         var experience1 = chatHistory1.Value.FirstOrDefault(m => m.Type == MemorygramType.Experience);
         experience1.ShouldNotBeNull();
         experience1.Content.ShouldContain(userInput1);
-        experience1.Subtype.ShouldBe(chatId1);
+        experience1.Subtype.ShouldBe("Chat");
         
         // Check chat 2 history
         var chatHistory2 = await _memoryQueryService.GetChatHistoryAsync(chatId2);
@@ -236,7 +238,7 @@ public class ExperienceCreationIntegrationTests : IDisposable
         var experience2 = chatHistory2.Value.FirstOrDefault(m => m.Type == MemorygramType.Experience);
         experience2.ShouldNotBeNull();
         experience2.Content.ShouldContain(userInput2);
-        experience2.Subtype.ShouldBe(chatId2);
+        experience2.Subtype.ShouldBe("Chat");
         
         // Experiences should be different
         experience1.Id.ShouldNotBe(experience2.Id);
@@ -282,6 +284,7 @@ public class ExperienceCreationIntegrationTests : IDisposable
         experienceCount.ShouldBe(0);
         _output.WriteLine("Request processed without chat ID - no experience created as expected");
     }
+
 
     private IPipelineExecutorService CreateMockPipelineExecutorService()
     {

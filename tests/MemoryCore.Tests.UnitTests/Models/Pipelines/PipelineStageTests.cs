@@ -1,3 +1,4 @@
+using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Models.Pipelines;
 using Shouldly;
 
@@ -18,7 +19,7 @@ public class PipelineStageTests
             // Add test information to context
             state.Context.Add(new ContextChunk
             {
-                Type = ContextChunkType.UserInput,
+                Type = MemorygramType.UserInput,
                 Provenance = new ContextProvenance
                 {
                     Source = "TestPipelineStage",
@@ -75,7 +76,7 @@ public class PipelineStageTests
         result.ShouldNotBeNull();
         result.ShouldBeSameAs(state);
         result.Context.ShouldNotBeEmpty();
-        result.Context.Last().Type.ShouldBe(ContextChunkType.UserInput);
+        result.Context.Last().Type.ShouldBe(MemorygramType.UserInput);
         result.Context.Last().Provenance.Source.ShouldBe("TestPipelineStage");
         result.Context.Last().Content.ShouldBe("Test component executed");
     }
@@ -118,10 +119,7 @@ public class PipelineStageTests
         // Assert
         result.ShouldNotBeNull();
         result.ShouldBeSameAs(state);
-        result.Context.ShouldNotBeEmpty();
-        result.Context.Last().Type.ShouldBe(ContextChunkType.Simulation);
-        result.Context.Last().Provenance.Source.ShouldBe("NullPipelineStage");
-        result.Context.Last().Content.ShouldBe("Simulated stage completed");
+        result.Context.ShouldBeEmpty(); // NullPipelineStage doesn't add any context
         status.CurrentStageName.ShouldBe(nameof(NullPipelineStage));
     }
 }

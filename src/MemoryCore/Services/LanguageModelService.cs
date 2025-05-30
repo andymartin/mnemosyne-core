@@ -1,15 +1,10 @@
-using FluentResults;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Mnemosyne.Core.Interfaces;
-using Mnemosyne.Core.Models;
-using System;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using FluentResults;
+using Microsoft.Extensions.Options;
+using Mnemosyne.Core.Interfaces;
+using Mnemosyne.Core.Models;
 
 namespace Mnemosyne.Core.Services;
 
@@ -32,18 +27,7 @@ public class LanguageModelService : ILanguageModelService
         _logger = logger;
     }
 
-    public async Task<Result<string>> GenerateCompletionAsync(
-        ChatCompletionRequest request,
-        LanguageModelType modelType = LanguageModelType.Master)
-    {
-        // Convert enum to string for backward compatibility
-        var modelName = modelType.ToString();
-        return await GenerateCompletionAsync(request, modelName);
-    }
-
-    public async Task<Result<string>> GenerateCompletionAsync(
-        ChatCompletionRequest request,
-        string modelName)
+    public async Task<Result<string>> GenerateCompletionAsync(ChatCompletionRequest request, LanguageModelType modelType)
     {
         try
         {
@@ -51,17 +35,17 @@ public class LanguageModelService : ILanguageModelService
             
             try
             {
-                config = _options.Value.GetConfiguration(modelName);
+                config = _options.Value.GetConfiguration(Enum.GetName(modelType)!);
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex, "Language model {ModelName} not configured", modelName);
-                return Result.Fail<string>($"Language model {modelName} not configured");
+                _logger.LogError(ex, "Language model {ModelName} not configured", modelType);
+                return Result.Fail<string>($"Language model {modelType} not configured");
             }
             
             if (string.IsNullOrEmpty(config.Url))
             {
-                return Result.Fail<string>($"Language model URL for {modelName} is not configured.");
+                return Result.Fail<string>($"Language model URL for {modelType} is not configured.");
             }
 
             // Override the model name if specified in the config

@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -25,11 +24,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
     private readonly Neo4jContainerFixture? _neo4jFixture;
     // private readonly EmbeddingServiceContainerFixture? _embeddingFixture; // Disabled Testcontainer for embedding
 
-    public MockFileSystem FileSystem { get; }
-
     public CustomWebApplicationFactory()
     {
-        FileSystem = new MockFileSystem();
     }
 
     public CustomWebApplicationFactory(
@@ -38,14 +34,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
     {
         _neo4jFixture = neo4jFixture;
         // _embeddingFixture = embeddingFixture; // Disabled Testcontainer for embedding
-        FileSystem = new MockFileSystem();
     }
 
     public CustomWebApplicationFactory WithPipelineStoragePath(string path)
     {
         var pipelineStoragePathKey = $"PipelineStorage:{nameof(PipelineStorageOptions.StoragePath)}";
         _configValues[pipelineStoragePathKey] = path;
-        FileSystem.Directory.CreateDirectory(path); // Ensure directory exists in mock
         return this;
     }
 
@@ -53,14 +47,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
     {
         base.ConfigureWebHost(builder);
 
-        var pipelineStoragePathKey = $"PipelineStorage:{nameof(PipelineStorageOptions.StoragePath)}";
-        if (!_configValues.ContainsKey(pipelineStoragePathKey))
-        {
-            var defaultPath = FileSystem.Path.Combine(FileSystem.Path.GetTempPath(), "TestPipelineManifests", Guid.NewGuid().ToString());
-            _configValues[pipelineStoragePathKey] = defaultPath;
-        }
-
-        FileSystem.Directory.CreateDirectory(_configValues[pipelineStoragePathKey]);
 
         builder.ConfigureAppConfiguration((context, config) =>
         {
@@ -76,13 +62,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
 
         builder.ConfigureServices(services =>
         {
+            // Use real file system for integration tests
             services.RemoveAll<IFileSystem>();
-            services.AddSingleton<IFileSystem>(FileSystem);
+            services.AddSingleton<IFileSystem, FileSystem>();
 
             services.RemoveAll<PipelineStorageOptions>();
             services.Configure<PipelineStorageOptions>(options =>
             {
-                options.StoragePath = _configValues[pipelineStoragePathKey];
+                // Point to the actual pipelines directory in the test project
+                var testProjectPath = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                options.StoragePath = System.IO.Path.Combine(testProjectPath!, "pipelines");
             });
 
             services.RemoveAll<IDriver>();
@@ -165,4 +154,5 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Mnemosyne.Core.
                 .WithToolsFromAssembly();
         });
     }
+
 }

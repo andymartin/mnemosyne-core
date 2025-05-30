@@ -1,12 +1,7 @@
 using FluentResults;
-using Microsoft.Extensions.Logging;
 using Mnemosyne.Core.Interfaces;
 using Mnemosyne.Core.Models;
 using Mnemosyne.Core.Models.Pipelines;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Mnemosyne.Core.Services;
 
@@ -48,42 +43,22 @@ public class ResponderService : IResponderService
         // 1. Persist user input memory (BEFORE pipeline execution)
         await PersistUserInputMemory(request);
 
-        // Handle nullable pipeline ID
-        PipelineManifest manifest;
-        Guid actualPipelineId;
-
-        if (request.PipelineId.HasValue)
+        // Pipeline ID provided - validate it exists
+        var pipelineId = request.PipelineId ?? Guid.Empty;
+        var manifestResult = await _pipelinesRepository.GetPipelineAsync(pipelineId);
+        if (manifestResult.IsFailed)
         {
-            // Pipeline ID provided - validate it exists
-            actualPipelineId = request.PipelineId.Value;
-            var getManifestResult = await _pipelinesRepository.GetPipelineAsync(actualPipelineId);
-            if (getManifestResult.IsFailed)
-            {
-                _logger.LogError("Failed to retrieve pipeline manifest for ID {PipelineId}: {Errors}",
-                    actualPipelineId, getManifestResult.Errors);
-                return Result.Fail<ResponseResult>($"Failed to retrieve pipeline manifest: {getManifestResult.Errors.First().Message}");
-            }
-            manifest = getManifestResult.Value;
-            _logger.LogInformation("Retrieved pipeline manifest: {PipelineName}", manifest.Name);
+            _logger.LogError("Failed to retrieve pipeline manifest for ID {PipelineId}: {Errors}",
+                pipelineId, manifestResult.Errors);
+            return Result.Fail<ResponseResult>($"Failed to retrieve pipeline manifest: {manifestResult.Errors.First().Message}");
         }
-        else
-        {
-            // No pipeline ID provided - use empty pipeline
-            actualPipelineId = Guid.Empty;
-            manifest = new PipelineManifest
-            {
-                Id = actualPipelineId,
-                Name = "Empty Pipeline",
-                Description = "Default empty pipeline for when no pipeline ID is provided",
-                Components = new List<ComponentConfiguration>()
-            };
-            _logger.LogInformation("Using empty pipeline (no pipeline ID provided)");
-        }
+        var manifest = manifestResult.Value;
+        _logger.LogInformation("Retrieved pipeline manifest: {PipelineName}", manifest.Name);
 
         var state = new PipelineExecutionState
         {
             RunId = Guid.NewGuid(),
-            PipelineId = actualPipelineId,
+            PipelineId = pipelineId,
             Request = request,
             History = new List<PipelineStageHistory>(),
             Context = new List<ContextChunk>()
@@ -175,12 +150,14 @@ public class ResponderService : IResponderService
                 {
                     state.Context.Add(new ContextChunk
                     {
-                        Type = historyItem.Type == MemorygramType.UserInput ? ContextChunkType.UserInput : ContextChunkType.AssistantResponse,
+                        Type = historyItem.Type,
+                        Subtype = historyItem.Subtype,
                         Content = historyItem.Content,
+                        RelevanceScore = 1.0f,
                         Provenance = new ContextProvenance
                         {
-                            Source = historyItem.Type == MemorygramType.UserInput ? "User" : "Assistant",
-                            Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp)
+                            Source = ContextProvenance.ChatHistory,
+                            Timestamp = historyItem.CreatedAt
                         }
                     });
                 }
@@ -205,7 +182,7 @@ public class ResponderService : IResponderService
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow,
-            Subtype: chatIdString
+            Subtype: "Chat"
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
@@ -242,7 +219,7 @@ public class ResponderService : IResponderService
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow,
-            Subtype: chatIdString
+            Subtype: "Chat"
         );
 
         var memorygramResult = await _memorygramService.CreateOrUpdateMemorygramAsync(memorygram);
@@ -292,6 +269,7 @@ public class ResponderService : IResponderService
                 Id: Guid.NewGuid(),
                 Content: experienceContent,
                 Type: MemorygramType.Experience,
+                Subtype: chatId,
                 TopicalEmbedding: Array.Empty<float>(),
                 ContentEmbedding: Array.Empty<float>(),
                 ContextEmbedding: Array.Empty<float>(),
@@ -299,8 +277,7 @@ public class ResponderService : IResponderService
                 Source: "ResponderService",
                 Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 CreatedAt: DateTimeOffset.UtcNow,
-                UpdatedAt: DateTimeOffset.UtcNow,
-                Subtype: chatId
+                UpdatedAt: DateTimeOffset.UtcNow
             );
 
             var result = await _memorygramService.CreateOrUpdateMemorygramAsync(experienceMemorygram);

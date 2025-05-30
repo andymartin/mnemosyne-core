@@ -65,14 +65,15 @@ public class MemoryRetrievalStage : PipelineStage
             {
                 var contextChunk = new ContextChunk
                 {
-                    Type = ContextChunkType.Memory,
+                    Type = memorygram.Type,
+                    Subtype = memorygram.Subtype,
                     Content = memorygram.Content,
                     RelevanceScore = memorygram.Score,
                     Provenance = new ContextProvenance
                     {
-                        Source = "MemoryRetrievalStage",
+                        Source = nameof(MemoryRetrievalStage),
                         OriginalId = memorygram.Id.ToString(),
-                        Timestamp = memorygram.UpdatedAt,
+                        Timestamp = memorygram.CreatedAt,
                         Metadata = new Dictionary<string, object>
                         {
                             { "MemorygramSource", memorygram.Source ?? string.Empty },

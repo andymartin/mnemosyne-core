@@ -35,27 +35,22 @@ public class PromptConstructorTests
         _service = new PromptConstructor(_mockLlmOptions.Object, _mockLogger.Object);
     }
 
-    [Fact]
-    public void ConstructPrompt_WithNullState_ShouldReturnFailure()
-    {
-        var result = _service.ConstructPrompt(null!);
-
-        result.IsSuccess.ShouldBeFalse();
-        result.Errors.First().Message.ShouldContain("Pipeline execution state contains no context");
-    }
 
     [Fact]
-    public void ConstructPrompt_WithEmptyContext_ShouldReturnFailure()
+    public void ConstructPrompt_WithEmptyContext_ShouldSucceed()
     {
         var state = new PipelineExecutionState
         {
-            Context = new List<ContextChunk>()
+            Context = new List<ContextChunk>(),
+            Request = new PipelineExecutionRequest { UserInput = "Hello" }
         };
 
         var result = _service.ConstructPrompt(state);
 
-        result.IsSuccess.ShouldBeFalse();
-        result.Errors.First().Message.ShouldContain("Pipeline execution state contains no context");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Request.Messages.Count.ShouldBe(2); // system + user
+        result.Value.SystemPrompt.ShouldContain("you are Nemo");
+        result.Value.SystemPrompt.ShouldNotContain("Associated Memories:");
     }
 
     [Fact]
@@ -68,29 +63,46 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Second user message",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(2) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(2)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "First assistant response",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(1) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(1)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "First user message",
-                    Provenance = new ContextProvenance { Timestamp = baseTime }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "Second assistant response",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(3) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(3)
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Current question" }
         };
 
         var result = _service.ConstructPrompt(state);
@@ -99,7 +111,7 @@ public class PromptConstructorTests
         var messages = result.Value.Request.Messages;
         
         var conversationMessages = messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
-        conversationMessages.Count.ShouldBe(4);
+        conversationMessages.Count.ShouldBe(5); // 4 history + 1 current
         
         conversationMessages[0].Role.ShouldBe("user");
         conversationMessages[0].Content.ShouldBe("First user message");
@@ -112,6 +124,9 @@ public class PromptConstructorTests
         
         conversationMessages[3].Role.ShouldBe("assistant");
         conversationMessages[3].Content.ShouldBe("Second assistant response");
+        
+        conversationMessages[4].Role.ShouldBe("user");
+        conversationMessages[4].Content.ShouldBe("Current question");
     }
 
     [Fact]
@@ -123,19 +138,25 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Hello, how are you?",
-                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = DateTimeOffset.Now
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Current question" }
         };
 
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
         var userMessages = result.Value.Request.Messages.Where(m => m.Role == "user").ToList();
-        userMessages.Count.ShouldBe(1);
+        userMessages.Count.ShouldBe(2); // chat history + current user input
         userMessages[0].Content.ShouldBe("Hello, how are you?");
+        userMessages[1].Content.ShouldBe("Current question");
     }
 
     [Fact]
@@ -147,11 +168,16 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "I'm doing well, thank you!",
-                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = DateTimeOffset.Now
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "How are you?" }
         };
 
         var result = _service.ConstructPrompt(state);
@@ -172,7 +198,7 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.Memory,
+                    Type = MemorygramType.Experience,
                     Content = "User likes coffee",
                     Provenance = new ContextProvenance
                     {
@@ -182,26 +208,29 @@ public class PromptConstructorTests
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Hello",
-                    Provenance = new ContextProvenance { Timestamp = testTimestamp.AddMinutes(1) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = testTimestamp.AddMinutes(1)
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Tell me about coffee" }
         };
 
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
         var systemMessages = result.Value.Request.Messages.Where(m => m.Role == "system").ToList();
-        systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
+        systemMessages.Count.ShouldBe(1);
         
         var systemMessage = systemMessages.First();
-        systemMessage.Content.ShouldContain("You are Nemo");
+        systemMessage.Content.ShouldContain("you are Nemo");
         systemMessage.Content.ShouldContain("Associated Memories:");
-        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T16:30:00Z");
-        systemMessage.Content.ShouldContain("**Type:** Memory");
-        systemMessage.Content.ShouldContain("**Source:** User Note: preferences");
-        systemMessage.Content.ShouldContain("**Content:**");
+        systemMessage.Content.ShouldContain("Memory from 2025-05-27T16:30:00Z");
+        systemMessage.Content.ShouldContain("User Note: preferences - Experience");
         systemMessage.Content.ShouldContain("User likes coffee");
     }
 
@@ -214,11 +243,16 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Hello",
-                    Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = DateTimeOffset.Now
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Current question" }
         };
 
         var result = _service.ConstructPrompt(state);
@@ -242,7 +276,7 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.Memory,
+                    Type = MemorygramType.Reflection,
                     Content = "User prefers morning meetings",
                     Provenance = new ContextProvenance
                     {
@@ -252,7 +286,7 @@ public class PromptConstructorTests
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.Memory,
+                    Type = MemorygramType.Reflection,
                     Content = "Project Alpha budget approved",
                     Provenance = new ContextProvenance
                     {
@@ -262,11 +296,16 @@ public class PromptConstructorTests
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "What's the status on Project Alpha?",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddHours(4) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddHours(4)
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Tell me about the project status" }
         };
 
         var result = _service.ConstructPrompt(state);
@@ -276,15 +315,15 @@ public class PromptConstructorTests
         
         systemMessage.Content.ShouldContain("Associated Memories:");
         
-        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T10:00:00Z");
-        systemMessage.Content.ShouldContain("**Source:** Meeting Transcript: weekly_standup");
+        systemMessage.Content.ShouldContain("Memory from 2025-05-27T10:00:00Z");
+        systemMessage.Content.ShouldContain("Meeting Transcript: weekly_standup - Reflection");
         systemMessage.Content.ShouldContain("User prefers morning meetings");
         
-        systemMessage.Content.ShouldContain("**Timestamp:** 2025-05-27T12:00:00Z");
-        systemMessage.Content.ShouldContain("**Source:** Consolidated Memory: project_decisions");
+        systemMessage.Content.ShouldContain("Memory from 2025-05-27T12:00:00Z");
+        systemMessage.Content.ShouldContain("Consolidated Memory: project_decisions - Reflection");
         systemMessage.Content.ShouldContain("Project Alpha budget approved");
         
-        var memoryCount = systemMessage.Content.Split("**Timestamp:**").Length - 1;
+        var memoryCount = systemMessage.Content.Split("Memory from").Length - 1;
         memoryCount.ShouldBe(2);
     }
 
@@ -297,7 +336,7 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Hello",
                     Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
                 }
@@ -323,7 +362,7 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Hello",
                     Provenance = new ContextProvenance { Timestamp = DateTimeOffset.Now }
                 }
@@ -348,29 +387,42 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.Memory,
+                    Type = MemorygramType.Experience,
                     Content = "User prefers formal communication",
                     Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(-10) }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Good morning",
-                    Provenance = new ContextProvenance { Timestamp = baseTime }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "Good morning! How may I assist you today?",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(1) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(1)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.Simulation,
+                    Type = MemorygramType.Reflection,
                     Content = "This should be ignored",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(2) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = "ShouldBeIgnored",
+                        Timestamp = baseTime.AddMinutes(2)
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Current question" }
         };
 
         var result = _service.ConstructPrompt(state);
@@ -382,12 +434,12 @@ public class PromptConstructorTests
         systemMessages.Count.ShouldBe(1); // Only one system message with memories appended
         
         var systemMessage = systemMessages.First();
-        systemMessage.Content.ShouldContain("You are Nemo");
+        systemMessage.Content.ShouldContain("you are Nemo");
         systemMessage.Content.ShouldContain("Associated Memories:");
         systemMessage.Content.ShouldContain("User prefers formal communication");
         
         var conversationMessages = messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
-        conversationMessages.Count.ShouldBe(2); // User input + assistant response
+        conversationMessages.Count.ShouldBe(3); // 2 history + 1 current
         
         conversationMessages[0].Role.ShouldBe("user");
         conversationMessages[0].Content.ShouldBe("Good morning");
@@ -395,7 +447,11 @@ public class PromptConstructorTests
         conversationMessages[1].Role.ShouldBe("assistant");
         conversationMessages[1].Content.ShouldBe("Good morning! How may I assist you today?");
         
-        messages.Any(m => m.Content.Contains("This should be ignored")).ShouldBeFalse();
+        conversationMessages[2].Role.ShouldBe("user");
+        conversationMessages[2].Content.ShouldBe("Current question");
+        
+        // The Reflection chunk will be included as a memory since it's not chat history
+        systemMessage.Content.ShouldContain("This should be ignored");
     }
 
     [Fact]
@@ -408,42 +464,63 @@ public class PromptConstructorTests
             {
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "What's the weather like?",
-                    Provenance = new ContextProvenance { Timestamp = baseTime }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "I don't have access to current weather data.",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(1) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(1)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "Can you help me with coding?",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(2) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(2)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.AssistantResponse,
+                    Type = MemorygramType.AssistantResponse,
                     Content = "Absolutely! What programming language are you working with?",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(3) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(3)
+                    }
                 },
                 new ContextChunk
                 {
-                    Type = ContextChunkType.UserInput,
+                    Type = MemorygramType.UserInput,
                     Content = "I'm working with C#",
-                    Provenance = new ContextProvenance { Timestamp = baseTime.AddMinutes(4) }
+                    Provenance = new ContextProvenance
+                    {
+                        Source = ContextProvenance.ChatHistory,
+                        Timestamp = baseTime.AddMinutes(4)
+                    }
                 }
-            }
+            },
+            Request = new PipelineExecutionRequest { UserInput = "Current question" }
         };
 
         var result = _service.ConstructPrompt(state);
 
         result.IsSuccess.ShouldBeTrue();
         var conversationMessages = result.Value.Request.Messages.Where(m => m.Role == "user" || m.Role == "assistant").ToList();
-        conversationMessages.Count.ShouldBe(5);
+        conversationMessages.Count.ShouldBe(6); // 5 history + 1 current
         
         conversationMessages[0].Role.ShouldBe("user");
         conversationMessages[0].Content.ShouldBe("What's the weather like?");
@@ -459,5 +536,8 @@ public class PromptConstructorTests
         
         conversationMessages[4].Role.ShouldBe("user");
         conversationMessages[4].Content.ShouldBe("I'm working with C#");
+        
+        conversationMessages[5].Role.ShouldBe("user");
+        conversationMessages[5].Content.ShouldBe("Current question");
     }
 }

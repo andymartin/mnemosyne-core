@@ -98,7 +98,7 @@ public class MemorygramRepositoryIntegrationTests : IDisposable
         // Verify they have the correct properties
         foreach (var initiation in chatInitiations)
         {
-            initiation.Subtype.ShouldNotBeNull(); // Chat initiations have a subtype (chatId)
+            initiation.Subtype.ShouldNotBeNull();
             initiation.PreviousMemorygramId.ShouldBeNull();
         }
     }

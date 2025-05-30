@@ -187,7 +187,7 @@ public partial class Program
 
         // Add repository and services
         builder.Services.AddSingleton<IMemorygramRepository, Neo4jMemorygramRepository>();
-        builder.Services.AddSingleton<ISemanticReformulator, SemanticReformulator>(); // Register SemanticReformulator
+        builder.Services.AddSingleton<ISemanticReformulator, SemanticReformulator>();
         builder.Services.AddSingleton<IMemorygramService, MemorygramService>();
         builder.Services.AddSingleton<IMemoryQueryService, MemoryQueryService>();
         builder.Services.AddSingleton<IQueryMemoryTool, QueryMemoryTool>();
@@ -211,14 +211,11 @@ public partial class Program
         builder.Services.AddSingleton<IResponderService, ResponderService>();
 
         // Register Pipeline Stages
-        builder.Services.AddTransient<UserInputStage>();
         builder.Services.AddTransient<AgenticWorkflowStage>();
-        builder.Services.AddSingleton<IPipelineExecutorService, PipelineExecutorService>(); // Register PipelineExecutorService
-        builder.Services.AddSingleton<IPromptConstructor, PromptConstructor>(); // Register PromptConstructor
-        builder.Services.AddSingleton<IResponderService, ResponderService>(); // Register ResponderService
-
-        // Register Pipeline Stages
-        builder.Services.AddTransient<UserInputStage>(); // Register UserInputStage
+        builder.Services.AddTransient<MemoryRetrievalStage>();
+        builder.Services.AddSingleton<IPipelineExecutorService, PipelineExecutorService>();
+        builder.Services.AddSingleton<IPromptConstructor, PromptConstructor>();
+        builder.Services.AddSingleton<IResponderService, ResponderService>();
 
         // Register MCP server
         builder.Services.AddMcpServer()

@@ -63,7 +63,7 @@ public class ChatServiceIntegrationTests : IDisposable
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
             UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
-            Subtype: chatId.ToString()
+            Subtype: "Chat"
         );
 
         // Create UserInput memorygram
@@ -163,7 +163,7 @@ public class ChatServiceIntegrationTests : IDisposable
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-20),
             UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-20),
-            Subtype: chatId1.ToString()
+            Subtype: "Chat"
         );
 
         var experience2 = new Memorygram(
@@ -178,7 +178,7 @@ public class ChatServiceIntegrationTests : IDisposable
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
             UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
-            Subtype: chatId2.ToString()
+            Subtype: "Chat"
         );
 
         // Create chat metadata nodes
@@ -262,7 +262,7 @@ public class ChatServiceIntegrationTests : IDisposable
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-5),
             UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-5),
-            Subtype: chatId.ToString()
+            Subtype: "Chat"
         );
 
         // Create chat metadata node
@@ -297,7 +297,7 @@ public class ChatServiceIntegrationTests : IDisposable
         result.Value.ShouldNotBeNull();
         result.Value.Id.ShouldBe(experienceId);
         result.Value.Type.ShouldBe(MemorygramType.Experience);
-        result.Value.Subtype.ShouldBe(chatId.ToString());
+        result.Value.Subtype.ShouldBe("Chat");
 
         _output.WriteLine($"Retrieved experience {result.Value.Id} for chat {chatId}");
     }
@@ -341,7 +341,7 @@ public class ChatServiceIntegrationTests : IDisposable
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             CreatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
             UpdatedAt: DateTimeOffset.UtcNow.AddMinutes(-10),
-            Subtype: chatId.ToString()
+            Subtype: "Chat"
         );
 
         var userMessage = new Memorygram(
